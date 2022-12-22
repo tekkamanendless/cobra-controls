@@ -110,26 +110,201 @@ func parseData(data []byte, fromClient bool) error {
 	switch fmt.Sprintf("%X", functionType) {
 	case "1081":
 		logrus.Infof("Function: Read Operation Status Information")
+		if fromClient {
+			recordIndex := parseUint32(data[0:4]) // 0x0 and 0xFFFFFFFF mean "latest".
+			data = data[4:]
+			if !isAll(data, 0) {
+				logrus.Warnf("Unexpected data; should be all zeros: %X", data)
+			}
+			logrus.Infof("Record index: %d", recordIndex)
+		} else {
+			year := uint8(data[0])
+			data = data[1:]
+			month := uint8(data[0])
+			data = data[1:]
+			day := uint8(data[0])
+			data = data[1:]
+			week := uint8(data[0])
+			data = data[1:]
+			hour := uint8(data[0])
+			data = data[1:]
+			minute := uint8(data[0])
+			data = data[1:]
+			second := uint8(data[0])
+			data = data[1:]
+			cardRecord := parseUint24(data[0:3])
+			data = data[3:]
+			popedomAmount := parseUint16(data[0:2])
+			data = data[2:]
+			indexLocation := data[0:8]
+			data = data[8:]
+			relayStatus := uint8(data[0])
+			data = data[1:]
+			doorMagnetButtonState := uint8(data[0])
+			data = data[1:]
+			reserved1 := uint8(data[0])
+			data = data[1:]
+			faultNumber := uint8(data[0])
+			data = data[1:]
+			reserved2 := uint8(data[0])
+			data = data[1:]
+			reserved3 := uint8(data[0])
+			data = data[1:]
+			// All remaining bytes are reserved.
+			if len(data) != 0 {
+				logrus.Warnf("Unexpected remaining data: %X", data)
+			}
+
+			logrus.Infof("Current time: %04d-%02d-%0d, week %d, %02d:%02d:%02d", year, month, day, week, hour, minute, second)
+			logrus.Infof("Card record: %d", cardRecord)
+			logrus.Infof("Popedom amount: %d", popedomAmount)
+			logrus.Infof("Index location: %X", indexLocation)
+			logrus.Infof("Relay status: %d", relayStatus)
+			logrus.Infof("Door magnet button state: %d", doorMagnetButtonState)
+			logrus.Infof("Reserved1: %d", reserved1)
+			logrus.Infof("Fault number: %d", faultNumber)
+			logrus.Infof("Reserved2: %d", reserved2)
+			logrus.Infof("Reserved3: %d", reserved3)
+		}
 	case "1082":
 		logrus.Infof("Function: Set basic information")
+		if fromClient {
+			if !isAll(data, 0) {
+				logrus.Warnf("Unexpected data; should be all zeros: %X", data)
+			}
+		} else {
+			// TODO: This appears to be wrong.
+			year := uint8(data[0])
+			data = data[1:]
+			month := uint8(data[0])
+			data = data[1:]
+			day := uint8(data[0])
+			data = data[1:]
+			version := uint8(data[0])
+			data = data[1:]
+			model := uint8(data[0])
+			data = data[1:]
+			// All remaining bytes are reserved.
+			if !isAll(data, 0) {
+				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data)
+			}
+
+			logrus.Infof("Drive issuance date: %d-%02d-%02d", year, month, day)
+			logrus.Infof("Version: %d", version)
+			logrus.Infof("Model: %d", model)
+		}
 	case "108B":
 		logrus.Infof("Function: Set the time")
+		logrus.Warnf("TODO NOT IMPLEMENTED")
 	case "108D":
 		logrus.Infof("Function: Read the records information (by index)")
+		logrus.Warnf("TODO NOT IMPLEMENTED")
 	case "108E":
 		logrus.Infof("Function: Remove a specified number of records")
+		logrus.Warnf("TODO NOT IMPLEMENTED")
 	case "108F":
 		logrus.Infof("Function: Set door controls (online/delay)")
+		logrus.Warnf("TODO NOT IMPLEMENTED")
 	case "1091":
 		logrus.Infof("Function: Upload the mission")
+		logrus.Warnf("TODO NOT IMPLEMENTED")
 	case "1093":
 		logrus.Infof("Function: Clear popedom")
+		logrus.Warnf("TODO NOT IMPLEMENTED")
 	case "1095":
 		logrus.Infof("Function: Read popedom")
+		logrus.Warnf("TODO NOT IMPLEMENTED")
 	case "1096":
 		logrus.Infof("Function: Read control period of time")
+		logrus.Warnf("TODO NOT IMPLEMENTED")
 	case "1097":
 		logrus.Infof("Function: Modification control period of time")
+		// TODO: This supposedly returns something "from 0" (maybe the period of time index?) on failure; otherwise it returns the same information.
+		if fromClient || !fromClient {
+			periodOfTimeIndex := parseUint16(data[0:2])
+			data = data[2:]
+			weekControl := uint8(data[0])
+			data = data[1:]
+			linkPeriodOfTime := uint8(data[0])
+			data = data[1:]
+			standby1 := uint8(data[0])
+			data = data[1:]
+			standby2 := uint8(data[0])
+			data = data[1:]
+			startTime1, err := parseTime(data[0:2])
+			if err != nil {
+				logrus.Warnf("Could not parse start time: [%T] %v", err, err)
+			}
+			data = data[2:]
+			endTime1, err := parseTime(data[0:2])
+			if err != nil {
+				logrus.Warnf("Could not parse end time: [%T] %v", err, err)
+			}
+			data = data[2:]
+			startTime2, err := parseTime(data[0:2])
+			if err != nil {
+				logrus.Warnf("Could not parse start time: [%T] %v", err, err)
+			}
+			data = data[2:]
+			endTime2, err := parseTime(data[0:2])
+			if err != nil {
+				logrus.Warnf("Could not parse end time: [%T] %v", err, err)
+			}
+			data = data[2:]
+			startTime3, err := parseTime(data[0:2])
+			if err != nil {
+				logrus.Warnf("Could not parse start time: [%T] %v", err, err)
+			}
+			data = data[2:]
+			endTime3, err := parseTime(data[0:2])
+			if err != nil {
+				logrus.Warnf("Could not parse end time: [%T] %v", err, err)
+			}
+			data = data[2:]
+			startTime4, err := parseTime(data[0:2])
+			if err != nil {
+				logrus.Warnf("Could not parse start time: [%T] %v", err, err)
+			}
+			data = data[2:]
+			endTime4, err := parseTime(data[0:2])
+			if err != nil {
+				logrus.Warnf("Could not parse end time: [%T] %v", err, err)
+			}
+			data = data[2:]
+			standby := data[0:4]
+			data = data[4:]
+			if len(data) != 0 {
+				logrus.Warnf("Unexpected additional data: (%d)", len(data))
+			}
+
+			logrus.Infof("Period of time index: %d", periodOfTimeIndex)
+			logrus.Infof("Week control: %d", weekControl)
+			logrus.Infof("Link period of time: %d", linkPeriodOfTime)
+			logrus.Infof("Standby 1: %d", standby1)
+			logrus.Infof("Standby 2: %d", standby2)
+			logrus.Infof("Start time 1: %v", startTime1)
+			logrus.Infof("End time 1: %v", endTime1)
+			logrus.Infof("Start time 2: %v", startTime2)
+			logrus.Infof("End time 2: %v", endTime2)
+			logrus.Infof("Start time 3: %v", startTime3)
+			logrus.Infof("End time 3: %v", endTime3)
+			logrus.Infof("Start time 4: %v", startTime4)
+			logrus.Infof("End time 4: %v", endTime4)
+			logrus.Infof("Standby: %X", standby)
+		}
+	case "1098":
+		// TODO: This appears to be some kind of simple thing, maybe a ping/pong action.
+		logrus.Infof("Function: Unknown1098")
+		if fromClient {
+			logrus.Infof("Unknown: %X", data)
+		} else {
+			result := uint8(data[0])
+			data = data[1:]
+			if !isAll(data, 0) {
+				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data)
+			}
+			logrus.Infof("Result: %d", result)
+		}
 	case "109B":
 		logrus.Infof("Function: Tail plus permissions")
 		if fromClient {
@@ -158,6 +333,9 @@ func parseData(data []byte, fromClient bool) error {
 			data = data[3:]
 			standby := data[0:4]
 			data = data[4:]
+			if !isAll(data, 0) {
+				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data)
+			}
 
 			logrus.Infof("Popedom index: %d", popedomIndex)
 			logrus.Infof("ID: %d", id)
@@ -172,20 +350,27 @@ func parseData(data []byte, fromClient bool) error {
 		} else {
 			result := uint8(data[0])
 			data = data[1:]
+			if !isAll(data, 0) {
+				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data)
+			}
 			logrus.Infof("Result: %d", result)
 		}
 	case "109D":
 		logrus.Infof("Function: Long-distance open door")
+		logrus.Warnf("TODO NOT IMPLEMENTED")
 	case "10F1":
 		logrus.Infof("Function: Read")
+		logrus.Warnf("TODO NOT IMPLEMENTED")
 	case "10F4":
 		logrus.Infof("Function: Amend, Expand, settings")
+		logrus.Warnf("TODO NOT IMPLEMENTED")
 		// 36: turn off timing mission
 	case "10F5":
 		logrus.Infof("Function: Realize timing task")
+		logrus.Warnf("TODO NOT IMPLEMENTED")
 	case "10F9":
-		// TODO TODO TOOD
-		logrus.Infof("Function: ???")
+		// TODO: This appears to be the thing that pushes the config up.
+		logrus.Infof("Function: Unknown10F9")
 		if fromClient {
 			unknown1 := data[0:4]
 			data = data[4:]
@@ -253,18 +438,53 @@ func parseData(data []byte, fromClient bool) error {
 		} else {
 			result := uint8(data[0])
 			data = data[1:]
+			if !isAll(data, 0) {
+				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data)
+			}
 			logrus.Infof("Result: %d", result)
 		}
 	case "10FF":
 		logrus.Infof("Function: Formatting")
+		// This will factory-reset the unit.
+		logrus.Warnf("TODO NOT IMPLEMENTED")
 	case "1101":
 		logrus.Infof("Function: Search .net equipment")
+		if fromClient {
+			// TODO: We seem to send "1" as the first byte.
+			if !isAll(data, 0) {
+				logrus.Warnf("Unexpected data; should be all zeros: %X", data)
+			}
+		} else {
+			macAddress := data[0:6]
+			data = data[6:]
+			ipAddress := data[0:4]
+			data = data[4:]
+			netmask := data[0:4]
+			data = data[4:]
+			gateway := data[0:4]
+			data = data[4:]
+			port := parseUint16(data[0:2])
+			data = data[2:]
+			// All remaining bytes are reserved.
+			if !isAll(data, 0) {
+				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data)
+			}
+
+			logrus.Infof("MAC address: %02X:%02X:%02X:%02X:%02X:%02X", macAddress[0], macAddress[1], macAddress[2], macAddress[3], macAddress[4], macAddress[5])
+			logrus.Infof("IP address: %d.%d.%d.%d", ipAddress[0], ipAddress[1], ipAddress[2], ipAddress[3])
+			logrus.Infof("Netmask: %d.%d.%d.%d", netmask[0], netmask[1], netmask[2], netmask[3])
+			logrus.Infof("Gateway: %d.%d.%d.%d", gateway[0], gateway[1], gateway[2], gateway[3])
+			logrus.Infof("Port: %d", port)
+		}
 	case "1107":
 		logrus.Infof("Function: Add or modify permissions")
+		logrus.Warnf("TODO NOT IMPLEMENTED")
 	case "1108":
 		logrus.Infof("Function: Delete an authority")
+		logrus.Warnf("TODO NOT IMPLEMENTED")
 	case "11F2":
 		logrus.Infof("Function: Setting TCPIP")
+		logrus.Warnf("TODO NOT IMPLEMENTED")
 	default:
 		logrus.Warnf("Unhandled function: %X", functionType)
 	}
@@ -272,7 +492,17 @@ func parseData(data []byte, fromClient bool) error {
 }
 
 func parseUint16(data []byte) uint16 {
-	value := uint16((uint16(data[1]) << 8) | uint16(data[0]))
+	value := (uint16(data[1]) << 8) | uint16(data[0])
+	return value
+}
+
+func parseUint24(data []byte) uint32 {
+	value := (uint32(data[1]) << 16) | (uint32(data[1]) << 8) | uint32(data[0])
+	return value
+}
+
+func parseUint32(data []byte) uint32 {
+	value := (uint32(data[1]) << 24) | (uint32(data[1]) << 16) | (uint32(data[1]) << 8) | uint32(data[0])
 	return value
 }
 
@@ -304,4 +534,13 @@ func parseTime(data []byte) (time.Time, error) {
 
 	output := time.Date(0, time.January, 1, int(hours), int(minutes), int(seconds)*2, 0, time.UTC)
 	return output, nil
+}
+
+func isAll(data []byte, expectedValue byte) bool {
+	for _, b := range data {
+		if b != expectedValue {
+			return false
+		}
+	}
+	return true
 }
