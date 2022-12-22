@@ -132,6 +132,48 @@ func parseData(data []byte, fromClient bool) error {
 		logrus.Infof("Function: Modification control period of time")
 	case "109B":
 		logrus.Infof("Function: Tail plus permissions")
+		if fromClient {
+			popedomIndex := parseUint16(data[0:2])
+			data = data[2:]
+			id := parseUint16(data[0:2])
+			data = data[2:]
+			userNumber := uint8(data[0])
+			data = data[1:]
+			cardID := fmt.Sprintf("%d%05d", userNumber, id)
+			doorNumber := uint8(data[0])
+			data = data[1:]
+			startDate, err := parseDate(data[0:2])
+			if err != nil {
+				logrus.Warnf("Could not parse start date: [%T] %v", err, err)
+			}
+			data = data[2:]
+			endDate, err := parseDate(data[0:2])
+			if err != nil {
+				logrus.Warnf("Could not parse end date: [%T] %v", err, err)
+			}
+			data = data[2:]
+			timeValue := data[0]
+			data = data[1:]
+			password := data[0:3]
+			data = data[3:]
+			standby := data[0:4]
+			data = data[4:]
+
+			logrus.Infof("Popedom index: %d", popedomIndex)
+			logrus.Infof("ID: %d", id)
+			logrus.Infof("User number: %d", userNumber)
+			logrus.Infof("Card ID: %s", cardID)
+			logrus.Infof("Door number: %d", doorNumber)
+			logrus.Infof("Start date: %v", startDate)
+			logrus.Infof("End date: %v", endDate)
+			logrus.Infof("Time: %X", timeValue)
+			logrus.Infof("Password: %X", password)
+			logrus.Infof("Standby: %X", standby)
+		} else {
+			result := uint8(data[0])
+			data = data[1:]
+			logrus.Infof("Result: %d", result)
+		}
 	case "109D":
 		logrus.Infof("Function: Long-distance open door")
 	case "10F1":
@@ -152,11 +194,16 @@ func parseData(data []byte, fromClient bool) error {
 				popedom := data[0:16]
 				data = data[16:]
 				logrus.Infof("Popedom: %X", popedom)
-				id := []byte{popedom[1], popedom[0]}
+				if fmt.Sprintf("%X", popedom) == "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF" {
+					logrus.Infof("Skipping bogus popedom.")
+					continue
+				}
+				id := parseUint16(popedom[0:2])
 				popedom = popedom[2:]
-				area := popedom[0]
+				area := uint8(popedom[0])
 				popedom = popedom[1:]
-				door := popedom[0]
+				cardID := fmt.Sprintf("%d%05d", area, id)
+				door := uint8(popedom[0])
 				popedom = popedom[1:]
 				openDateBytes := popedom[0:2]
 				popedom = popedom[2:]
@@ -187,9 +234,10 @@ func parseData(data []byte, fromClient bool) error {
 				if len(popedom) != 0 {
 					logrus.Warnf("Unexpected extra popedom data: (%d)", len(popedom))
 				}
-				logrus.Infof("ID: %X", id)
-				logrus.Infof("Area: %X", area)
-				logrus.Infof("Door: %X", door)
+				logrus.Infof("ID: %d", id)
+				logrus.Infof("Area: %d", area)
+				logrus.Infof("Card ID: %s", cardID)
+				logrus.Infof("Door: %d", door)
 				logrus.Infof("Open Date: %v", openDate)
 				logrus.Infof("Close Date: %v", closeDate)
 				logrus.Infof("Control index: %X", controlIndex) // 0 to not use control time; 1 to specify a time.
@@ -203,7 +251,9 @@ func parseData(data []byte, fromClient bool) error {
 				logrus.Warnf("Unexpected trailing data length: (%d)", len(data))
 			}
 		} else {
-			logrus.Infof("TODO TODO TODO")
+			result := uint8(data[0])
+			data = data[1:]
+			logrus.Infof("Result: %d", result)
 		}
 	case "10FF":
 		logrus.Infof("Function: Formatting")
@@ -221,16 +271,21 @@ func parseData(data []byte, fromClient bool) error {
 	return nil
 }
 
+func parseUint16(data []byte) uint16 {
+	value := uint16((uint16(data[1]) << 8) | uint16(data[0]))
+	return value
+}
+
 func parseDate(data []byte) (time.Time, error) {
 	if len(data) != 2 {
 		return time.Time{}, fmt.Errorf("invalid length: %d (expected: 2)", len(data))
 	}
-	value := uint16((uint16(data[1]) << 8) | uint16(data[0]))
+	value := parseUint16(data)
 	year := (value & 0b1111111000000000) >> 9
 	month := (value & 0b0000000111100000) >> 5
 	day := (value & 0b0000000000011111) >> 0
 
-	logrus.Infof("Date: %04d-%02d-%02d", year, month, day)
+	logrus.Debugf("Date: %04d-%02d-%02d", year, month, day)
 
 	output := time.Date(2000+int(year), time.Month(month), int(day), 0, 0, 0, 0, time.UTC)
 	return output, nil
@@ -240,11 +295,12 @@ func parseTime(data []byte) (time.Time, error) {
 	if len(data) != 2 {
 		return time.Time{}, fmt.Errorf("invalid length: %d (expected: 2)", len(data))
 	}
-	value := uint16((uint16(data[1]) << 8) | uint16(data[0]))
+	value := parseUint16(data)
 	hours := (value & 0b1111100000000000) >> 11
 	minutes := (value & 0b0000011111100000) >> 5
 	seconds := (value & 0b0000000000011111) >> 0
-	logrus.Infof("Time: %02d:%02d:%02d", hours, minutes, seconds)
+
+	logrus.Debugf("Time: %02d:%02d:%02d", hours, minutes, seconds)
 
 	output := time.Date(0, time.January, 1, int(hours), int(minutes), int(seconds)*2, 0, time.UTC)
 	return output, nil
