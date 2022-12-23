@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/google/gopacket"
@@ -363,8 +364,28 @@ func parseData(data []byte, fromClient bool) error {
 		logrus.Warnf("TODO NOT IMPLEMENTED")
 	case "10F4":
 		logrus.Infof("Function: Amend, Expand, settings")
-		logrus.Warnf("TODO NOT IMPLEMENTED")
-		// 36: turn off timing mission
+		if fromClient {
+			address := uint8(data[0])
+			data = data[1:]
+			unknown1 := uint8(data[0])
+			data = data[1:]
+			value := uint8(data[0])
+			data = data[1:]
+			if !isAll(data, 0) {
+				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data)
+			}
+
+			logrus.Infof("Address: %02X", address)
+			logrus.Infof("Unknown1: %d (should probably be 0)", unknown1)
+			logrus.Infof("Value: 0b%08s", strconv.FormatInt(int64(value), 2))
+		} else {
+			result := uint8(data[0])
+			data = data[1:]
+			if !isAll(data, 0) {
+				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data)
+			}
+			logrus.Infof("Result: %d", result)
+		}
 	case "10F5":
 		logrus.Infof("Function: Realize timing task")
 		logrus.Warnf("TODO NOT IMPLEMENTED")
