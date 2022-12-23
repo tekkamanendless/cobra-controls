@@ -211,7 +211,18 @@ func parseData(data []byte, fromClient bool) error {
 		logrus.Warnf("TODO NOT IMPLEMENTED")
 	case "1093":
 		logrus.Infof("Function: Clear popedom")
-		logrus.Warnf("TODO NOT IMPLEMENTED")
+		if fromClient {
+			if !isAll(data, 0) {
+				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data)
+			}
+		} else {
+			result := uint8(data[0])
+			data = data[1:]
+			if !isAll(data, 0) {
+				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data)
+			}
+			logrus.Infof("Result: %d", result)
+		}
 	case "1095":
 		logrus.Infof("Function: Read popedom")
 		logrus.Warnf("TODO NOT IMPLEMENTED")
