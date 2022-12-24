@@ -10,6 +10,7 @@ import (
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/sirupsen/logrus"
+	"gitlab.com/doug-manley/cobra-controls/wire"
 )
 
 func main() {
@@ -57,41 +58,50 @@ func main() {
 			data := packet.TransportLayer().LayerPayload()
 			logrus.Debugf("Data (%d): %X", len(data), data)
 
-			parseData(data, fromClient)
+			parseData(wire.NewReader(data), fromClient)
 		}
 	}
 }
 
-func parseData(data []byte, fromClient bool) error {
+func parseData(reader *wire.Reader, fromClient bool) error {
 	if fromClient {
 		logrus.Infof("Mode: Client")
 	} else {
 		logrus.Infof("Mode: Server")
 	}
 
-	if len(data) < 8 {
-		return fmt.Errorf("invalid length: %d", len(data))
+	startByte, err := reader.ReadUint8()
+	if err != nil {
+		return err
 	}
-	startByte := data[0]
-	endByte := data[len(data)-1]
 	logrus.Debugf("Start byte: %X", startByte)
-	logrus.Debugf("End byte: %X", endByte)
 	if startByte != 0x7E {
 		return fmt.Errorf("invalid start byte: %X (expected: 7E)", startByte)
 	}
+
+	data, err := reader.ReadBytes(reader.Length() - 3)
+	if err != nil {
+		return fmt.Errorf("could not read payload: %w", err)
+	}
+
+	checksum, err := reader.ReadUint16()
+	if err != nil {
+		return fmt.Errorf("could not read checksum: %w", err)
+	}
+	logrus.Debugf("Expected checksum: %d", checksum)
+
+	endByte, err := reader.ReadUint8()
+	if err != nil {
+		return err
+	}
+	logrus.Debugf("End byte: %X", endByte)
 	if endByte != 0x0D {
 		return fmt.Errorf("invalid end byte: %X (expected: 0D)", endByte)
 	}
 
-	checksumBytes := data[len(data)-3 : len(data)-1]
-	checksum := int(uint16(checksumBytes[1])<<8 | uint16(checksumBytes[0]))
-	logrus.Debugf("Expected checksum: %d", checksum)
-
-	data = data[1 : len(data)-3]
-
-	actualChecksum := 0
+	actualChecksum := uint16(0)
 	for i := 0; i < len(data); i++ {
-		actualChecksum += int(data[i])
+		actualChecksum += uint16(data[i])
 	}
 	logrus.Debugf("Actual checksum: %d", actualChecksum)
 	if actualChecksum != checksum {

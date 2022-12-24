@@ -1,35 +1,34 @@
 package wire
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"time"
 )
 
 type Reader struct {
-	reader io.Reader
+	data []byte
 }
 
-func NewReader(reader io.Reader) *Reader {
+func NewReader(data []byte) *Reader {
 	r := &Reader{
-		reader: reader,
+		data: data,
 	}
 	return r
+}
+
+func (r *Reader) Length() int {
+	return len(r.data)
 }
 
 func (r *Reader) ReadBytes(count int) ([]byte, error) {
 	if count == 0 {
 		return []byte{}, nil
 	}
-	output := make([]byte, count)
-	bytesRead, err := r.reader.Read(output)
-	if err != nil {
-		return nil, err
+	if len(r.data) < count {
+		return nil, fmt.Errorf("data too small; only have %d bytes available (asked for: %d)", len(r.data), count)
 	}
-	if bytesRead != count {
-		return nil, fmt.Errorf("only read %d bytes (expected: %d)", bytesRead, count)
-	}
+	output := r.data[0:count]
+	r.data = r.data[count:]
 	return output, nil
 }
 
@@ -38,7 +37,7 @@ func (r *Reader) Read(count int) (*Reader, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewReader(bytes.NewReader(contents)), nil
+	return NewReader(contents), nil
 }
 
 func (r *Reader) ReadUint8() (uint8, error) {
