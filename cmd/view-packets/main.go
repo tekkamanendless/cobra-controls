@@ -228,10 +228,65 @@ func parseData(data []byte, fromClient bool) error {
 		logrus.Warnf("TODO NOT IMPLEMENTED")
 	case "108D":
 		logrus.Infof("Function: Read the records information (by index)")
-		logrus.Warnf("TODO NOT IMPLEMENTED")
+		if fromClient {
+			recordIndex := parseUint32(data[0:4])
+			data = data[4:]
+			// All remaining bytes are reserved.
+			if !isAll(data, 0) {
+				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data)
+			}
+			logrus.Infof("Record index: %d", recordIndex)
+		} else {
+			cardNumber := parseUint16(data[0:2])
+			data = data[2:]
+			userNumber := uint8(data[0])
+			data = data[1:]
+			brushCardState := uint8(data[0])
+			data = data[1:]
+			brushCardDate, err := parseDate(data[0:2])
+			if err != nil {
+				logrus.Warnf("Error parsing date: [%T] %v", err, err)
+			}
+			data = data[2:]
+			brushCardTime, err := parseTime(data[0:2])
+			if err != nil {
+				logrus.Warnf("Error parsing time: [%T] %v", err, err)
+			}
+			data = data[2:]
+			// All remaining bytes are reserved.
+			if !isAll(data, 0) {
+				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data)
+			}
+
+			cardID := fmt.Sprintf("%d%05d", userNumber, cardNumber)
+			logrus.Infof("   Card number: %d", cardNumber)
+			logrus.Infof("   User number: %d", userNumber)
+			logrus.Infof("   Card ID: %s", cardID)
+			logrus.Infof("   Brush card state: %d", brushCardState)
+			logrus.Infof("   Brush date: %v", brushCardDate)
+			logrus.Infof("   Brush time: %v", brushCardTime)
+
+		}
 	case "108E":
 		logrus.Infof("Function: Remove a specified number of records")
-		logrus.Warnf("TODO NOT IMPLEMENTED")
+		if fromClient {
+			recordIndex := parseUint32(data[0:4])
+			data = data[4:]
+			// All remaining bytes are reserved.
+			if !isAll(data, 0) {
+				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data)
+			}
+			logrus.Infof("Record index: %d", recordIndex)
+		} else {
+			result := uint8(data[0])
+			data = data[1:]
+			// All remaining bytes are reserved.
+			if !isAll(data, 0) {
+				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data)
+			}
+
+			logrus.Infof("Result: %d (0 is good)", result)
+		}
 	case "108F":
 		logrus.Infof("Function: Set door controls (online/delay)")
 		logrus.Warnf("TODO NOT IMPLEMENTED")
@@ -584,7 +639,7 @@ func parseData(data []byte, fromClient bool) error {
 		logrus.Infof("Function: Setting TCPIP")
 		logrus.Warnf("TODO NOT IMPLEMENTED")
 	default:
-		logrus.Warnf("Unhandled function: %X", functionType)
+		logrus.Warnf("TODO UNHANDLED FUNCTION: %X", functionType)
 	}
 	return nil
 }
