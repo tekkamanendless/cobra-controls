@@ -25,4 +25,9 @@ func main() {
 	}
 	rootCommand.PersistentFlags().BoolVar(&verbose, "verbose", false, "Enable verbose output")
 
+	err := rootCommand.Execute()
+	if err != nil {
+		logrus.Errorf("Error: %v", err)
+	}
+	os.Exit(0)
 }
