@@ -13,11 +13,27 @@ type Envelope struct {
 	BoardAddress uint16 // This is the board address.  It appears to be the last 2 bytes of the MAC address.
 	Function     uint16 // This is the function.
 	Contents     []byte // This is the contents of the message.
-	Checksum     uint16 // This is the sum of all contents, including the board address and function.
 }
 
 func (e *Envelope) Encode() ([]byte, error) {
-	return nil, nil
+	w := NewWriter()
+	w.WriteUint16(e.BoardAddress)
+	w.WriteUint16(e.Function)
+	w.WriteBytes(e.Contents)
+
+	internalContents := w.Bytes()
+	checksum := uint16(0)
+	for i := 0; i < len(internalContents); i++ {
+		checksum += uint16(internalContents[i])
+	}
+
+	w = NewWriter()
+	w.WriteUint8(EnvelopeStartByte)
+	w.WriteBytes(internalContents)
+	w.WriteUint16(checksum)
+	w.WriteUint8(EnvelopeEndByte)
+
+	return w.Bytes(), nil
 }
 
 func (e *Envelope) Decode(contents []byte) error {
@@ -33,7 +49,7 @@ func (e *Envelope) Decode(contents []byte) error {
 		return fmt.Errorf("could not read internal contents: %w", err)
 	}
 
-	e.Checksum, err = r.ReadUint16()
+	expectedChecksum, err := r.ReadUint16()
 	if err != nil {
 		return fmt.Errorf("could not read checksum: %w", err)
 	}
@@ -52,8 +68,8 @@ func (e *Envelope) Decode(contents []byte) error {
 	for i := 0; i < len(internalContents); i++ {
 		actualChecksum += uint16(internalContents[i])
 	}
-	if actualChecksum != e.Checksum {
-		return fmt.Errorf("invalid checksum: %d (expected: %d)", actualChecksum, e.Checksum)
+	if actualChecksum != expectedChecksum {
+		return fmt.Errorf("invalid checksum: %d (expected: %d)", actualChecksum, expectedChecksum)
 	}
 
 	r = NewReader(internalContents)
