@@ -57,74 +57,35 @@ func main() {
 			data := packet.TransportLayer().LayerPayload()
 			logrus.Debugf("Data (%d): %X", len(data), data)
 
-			parseData(wire.NewReader(data), fromClient)
+			err = parseData(data, fromClient)
+			if err != nil {
+				logrus.Warnf("Could not parse data: [%T] %v", err, err)
+			}
 		}
 	}
 }
 
-func parseData(reader *wire.Reader, fromClient bool) error {
+func parseData(fullContents []byte, fromClient bool) error {
 	if fromClient {
 		logrus.Infof("Mode: Client")
 	} else {
 		logrus.Infof("Mode: Server")
 	}
 
-	startByte, err := reader.ReadUint8()
+	var envelope wire.Envelope
+	err := wire.Decode(fullContents, &envelope)
 	if err != nil {
-		return err
-	}
-	logrus.Debugf("Start byte: %X", startByte)
-	if startByte != 0x7E {
-		return fmt.Errorf("invalid start byte: %X (expected: 7E)", startByte)
-	}
-
-	data, err := reader.Read(reader.Length() - 3)
-	if err != nil {
-		return fmt.Errorf("could not read payload: %w", err)
-	}
-
-	checksum, err := reader.ReadUint16()
-	if err != nil {
-		return fmt.Errorf("could not read checksum: %w", err)
-	}
-	logrus.Debugf("Expected checksum: %d", checksum)
-
-	endByte, err := reader.ReadUint8()
-	if err != nil {
-		return err
-	}
-	logrus.Debugf("End byte: %X", endByte)
-	if endByte != 0x0D {
-		return fmt.Errorf("invalid end byte: %X (expected: 0D)", endByte)
-	}
-
-	actualChecksum := uint16(0)
-	{
-		dataBytes := data.Bytes()
-		for i := 0; i < len(dataBytes); i++ {
-			actualChecksum += uint16(dataBytes[i])
-		}
-	}
-	logrus.Debugf("Actual checksum: %d", actualChecksum)
-	if actualChecksum != checksum {
-		return fmt.Errorf("checksum does match: %d (expected: %d)", actualChecksum, checksum)
-	}
-
-	boardAddress, err := data.ReadUint16()
-	if err != nil {
-		return fmt.Errorf("could not read the board address: %w", err)
-	}
-	functionType, err := data.ReadUint16()
-	if err != nil {
-		return fmt.Errorf("could not read the function: %w", err)
+		return fmt.Errorf("could not decode envelope: %w", err)
 	}
 
 	logrus.Infof("Packet:")
-	logrus.Infof("Board address: 0x%X", boardAddress)
-	logrus.Infof("Function type: 0x%X", functionType)
-	logrus.Infof("Remaining data: (%d) %X", data.Length(), data.Bytes())
+	logrus.Infof("Board address: 0x%X", envelope.BoardAddress)
+	logrus.Infof("Function type: 0x%X", envelope.Function)
+	logrus.Infof("Remaining data: (%d) %X", len(envelope.Contents), envelope.Contents)
 
-	switch functionType {
+	data := wire.NewReader(envelope.Contents)
+
+	switch envelope.Function {
 	case 0x1081:
 		logrus.Infof("Function: Read Operation Status Information")
 		if fromClient {
@@ -793,7 +754,7 @@ func parseData(reader *wire.Reader, fromClient bool) error {
 		logrus.Infof("Function: Setting TCPIP")
 		logrus.Warnf("TODO NOT IMPLEMENTED")
 	default:
-		logrus.Warnf("TODO UNHANDLED FUNCTION: %X", functionType)
+		logrus.Warnf("TODO UNHANDLED FUNCTION: %X", envelope.Function)
 	}
 	return nil
 }
