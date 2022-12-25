@@ -636,17 +636,32 @@ func parseData(reader *wire.Reader, fromClient bool) error {
 		// TODO: This appears to be the thing that pushes the config up.
 		logrus.Infof("Function: Unknown10F9")
 		if fromClient {
-			unknown1, err := data.ReadBytes(4)
+			unknown1, err := data.ReadUint8()
 			if err != nil {
 				return fmt.Errorf("could not read unknown1: %w", err)
 			}
-			logrus.Infof("Unknown1: %X", unknown1)
-			for data.Length() >= 16 {
+			unknown2, err := data.ReadUint8()
+			if err != nil {
+				return fmt.Errorf("could not read unknown2: %w", err)
+			}
+			unknown3, err := data.ReadUint8()
+			if err != nil {
+				return fmt.Errorf("could not read unknown3: %w", err)
+			}
+			unknown4, err := data.ReadUint8()
+			if err != nil {
+				return fmt.Errorf("could not read unknown4: %w", err)
+			}
+			logrus.Infof("Unknown1: %d", unknown1)
+			logrus.Infof("Unknown2: %d", unknown2)
+			logrus.Infof("Unknown3: %d (index, maybe?)", unknown3)
+			logrus.Infof("Unknown4: %d", unknown4)
+			for p := 0; data.Length() >= 16; p++ {
 				popedom, err := data.Read(16)
 				if err != nil {
 					return fmt.Errorf("could not read popedom: %w", err)
 				}
-				logrus.Infof("Popedom: %X", popedom.Bytes())
+				logrus.Infof("Popedom[%2d]: %X", p, popedom.Bytes())
 				if fmt.Sprintf("%X", popedom.Bytes()) == "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF" {
 					logrus.Infof("Skipping bogus popedom.")
 					continue
