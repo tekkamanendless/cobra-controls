@@ -16,6 +16,10 @@ func NewReader(data []byte) *Reader {
 	return r
 }
 
+func (r *Reader) Bytes() []byte {
+	return r.data
+}
+
 func (r *Reader) Length() int {
 	return len(r.data)
 }
