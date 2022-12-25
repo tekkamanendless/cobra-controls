@@ -44,7 +44,7 @@ func (e *Envelope) Decode(contents []byte) error {
 		return fmt.Errorf("could not read start byte: %w", err)
 	}
 
-	internalContents, err := r.ReadBytes(r.Length() - 3)
+	internalContents, err := r.ReadBytes(r.Length() - 3) // 2 bytes for the checksum and 1 for the end byte.
 	if err != nil {
 		return fmt.Errorf("could not read internal contents: %w", err)
 	}
@@ -56,6 +56,10 @@ func (e *Envelope) Decode(contents []byte) error {
 	endByte, err := r.ReadUint8()
 	if err != nil {
 		return fmt.Errorf("could not read end byte: %w", err)
+	}
+
+	if r.Length() != 0 {
+		return fmt.Errorf("somehow did not read enough data; length is %d", r.Length())
 	}
 
 	if startByte != EnvelopeStartByte {
@@ -81,7 +85,7 @@ func (e *Envelope) Decode(contents []byte) error {
 	if err != nil {
 		return fmt.Errorf("could not read function: %w", err)
 	}
-	e.Contents, err = r.ReadBytes(r.Length() - 3)
+	e.Contents, err = r.ReadBytes(r.Length())
 	if err != nil {
 		return fmt.Errorf("could not read contents: %w", err)
 	}

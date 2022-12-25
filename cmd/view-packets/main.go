@@ -1,8 +1,8 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	"os"
 	"strconv"
 
 	"github.com/google/gopacket"
@@ -13,11 +13,20 @@ import (
 )
 
 func main() {
+	verbose := flag.Bool("verbose", false, "Enable verbose logging")
+	flag.Parse()
+	logrus.Infof("verbose: %t", *verbose)
+	if *verbose {
+		logrus.Infof("Enabling verbose logging.")
+		logrus.SetLevel(logrus.DebugLevel)
+	}
+	filenames := flag.Args()
+
 	filterPacket := func(packet gopacket.Packet) bool {
 		if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
 			logrus.Debugf("This is a TCP packet.")
 			tcp, _ := tcpLayer.(*layers.TCP)
-			logrus.Debugf("From src port %d to dst port %d\n", tcp.SrcPort, tcp.DstPort)
+			logrus.Debugf("From src port %d to dst port %d.", tcp.SrcPort, tcp.DstPort)
 			if tcp.SrcPort != 60000 && tcp.DstPort != 60000 {
 				return false
 			}
@@ -30,7 +39,6 @@ func main() {
 		return true
 	}
 
-	filenames := os.Args[1:]
 	for _, filename := range filenames {
 		logrus.Infof("File: %s", filename)
 		handle, err := pcap.OpenOffline(filename)
