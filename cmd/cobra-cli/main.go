@@ -74,7 +74,7 @@ func main() {
 
 					envelope := wire.Envelope{
 						BoardAddress: boardAddress,
-						Function:     0x1082,
+						Function:     wire.FunctionGetBasicInfo,
 					}
 					contents, err := wire.Encode(&envelope)
 					if err != nil {
@@ -111,7 +111,15 @@ func main() {
 						logrus.Errorf("Could not read contents: %v", err)
 						os.Exit(1)
 					}
-					logrus.Infof("Response: %x", envelope.Contents)
+					logrus.Debugf("Response: %x", envelope.Contents)
+
+					var response wire.GetBasicInfoResponse
+					err = wire.Decode(envelope.Contents, &response)
+					if err != nil {
+						logrus.Errorf("Could not decode response: %v", err)
+						os.Exit(1)
+					}
+					logrus.Infof("Response: %+v", response)
 				}
 			},
 		}

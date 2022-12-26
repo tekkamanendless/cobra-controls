@@ -101,7 +101,7 @@ func parseData(fullContents []byte, fromClient bool) error {
 			if err != nil {
 				return fmt.Errorf("could not read record index: %w", err)
 			}
-			if !isAll(data.Bytes(), 0) {
+			if !wire.IsAll(data.Bytes(), 0) {
 				logrus.Warnf("Unexpected data; should be all zeros: %X", data.Bytes())
 			}
 			logrus.Infof("Record index: %d", recordIndex)
@@ -222,7 +222,7 @@ func parseData(fullContents []byte, fromClient bool) error {
 	case 0x1082:
 		logrus.Infof("Function: Set basic information")
 		if fromClient {
-			if !isAll(data.Bytes(), 0) {
+			if !wire.IsAll(data.Bytes(), 0) {
 				logrus.Warnf("Unexpected data; should be all zeros: %X", data.Bytes())
 			}
 		} else {
@@ -248,7 +248,7 @@ func parseData(fullContents []byte, fromClient bool) error {
 				return fmt.Errorf("could not read model: %w", err)
 			}
 			// All remaining bytes are reserved.
-			if !isAll(data.Bytes(), 0) {
+			if !wire.IsAll(data.Bytes(), 0) {
 				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
 			}
 
@@ -267,7 +267,7 @@ func parseData(fullContents []byte, fromClient bool) error {
 				return fmt.Errorf("could not read record index: %w", err)
 			}
 			// All remaining bytes are reserved.
-			if !isAll(data.Bytes(), 0) {
+			if !wire.IsAll(data.Bytes(), 0) {
 				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
 			}
 			logrus.Infof("Record index: %d", recordIndex)
@@ -293,7 +293,7 @@ func parseData(fullContents []byte, fromClient bool) error {
 				return fmt.Errorf("could not read brush card time: %w", err)
 			}
 			// All remaining bytes are reserved.
-			if !isAll(data.Bytes(), 0) {
+			if !wire.IsAll(data.Bytes(), 0) {
 				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
 			}
 
@@ -314,7 +314,7 @@ func parseData(fullContents []byte, fromClient bool) error {
 				return fmt.Errorf("could not read record index: %w", err)
 			}
 			// All remaining bytes are reserved.
-			if !isAll(data.Bytes(), 0) {
+			if !wire.IsAll(data.Bytes(), 0) {
 				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
 			}
 			logrus.Infof("Record index: %d", recordIndex)
@@ -324,7 +324,7 @@ func parseData(fullContents []byte, fromClient bool) error {
 				return fmt.Errorf("could not read result: %w", err)
 			}
 			// All remaining bytes are reserved.
-			if !isAll(data.Bytes(), 0) {
+			if !wire.IsAll(data.Bytes(), 0) {
 				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
 			}
 
@@ -339,7 +339,7 @@ func parseData(fullContents []byte, fromClient bool) error {
 	case 0x1093:
 		logrus.Infof("Function: Clear popedom")
 		if fromClient {
-			if !isAll(data.Bytes(), 0) {
+			if !wire.IsAll(data.Bytes(), 0) {
 				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
 			}
 		} else {
@@ -347,7 +347,7 @@ func parseData(fullContents []byte, fromClient bool) error {
 			if err != nil {
 				return fmt.Errorf("could not read result: %w", err)
 			}
-			if !isAll(data.Bytes(), 0) {
+			if !wire.IsAll(data.Bytes(), 0) {
 				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
 			}
 			logrus.Infof("Result: %d", result)
@@ -447,7 +447,7 @@ func parseData(fullContents []byte, fromClient bool) error {
 			if err != nil {
 				return fmt.Errorf("could not read result: %w", err)
 			}
-			if !isAll(data.Bytes(), 0) {
+			if !wire.IsAll(data.Bytes(), 0) {
 				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
 			}
 			logrus.Infof("Result: %d", result)
@@ -492,7 +492,7 @@ func parseData(fullContents []byte, fromClient bool) error {
 			if err != nil {
 				return fmt.Errorf("could not read standby: %w", err)
 			}
-			if !isAll(data.Bytes(), 0) {
+			if !wire.IsAll(data.Bytes(), 0) {
 				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
 			}
 
@@ -511,7 +511,7 @@ func parseData(fullContents []byte, fromClient bool) error {
 			if err != nil {
 				return fmt.Errorf("could not read result: %w", err)
 			}
-			if !isAll(data.Bytes(), 0) {
+			if !wire.IsAll(data.Bytes(), 0) {
 				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
 			}
 			logrus.Infof("Result: %d", result)
@@ -527,14 +527,14 @@ func parseData(fullContents []byte, fromClient bool) error {
 			if err != nil {
 				return fmt.Errorf("could not read unknown1: %w", err)
 			}
-			if !isAll(data.Bytes(), 0) {
+			if !wire.IsAll(data.Bytes(), 0) {
 				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
 			}
 
 			logrus.Infof("Door: %d", door)
 			logrus.Infof("Unknown1: %d", unknown1)
 		} else {
-			if !isAll(data.Bytes(), 0) {
+			if !wire.IsAll(data.Bytes(), 0) {
 				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
 			}
 		}
@@ -549,7 +549,7 @@ func parseData(fullContents []byte, fromClient bool) error {
 			if err != nil {
 				return fmt.Errorf("could not read reserved: %w", err)
 			}
-			if !isAll(data.Bytes(), 0) {
+			if !wire.IsAll(data.Bytes(), 0) {
 				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
 			}
 
@@ -560,7 +560,7 @@ func parseData(fullContents []byte, fromClient bool) error {
 			if err != nil {
 				return fmt.Errorf("could not read value: %w", err)
 			}
-			if !isAll(data.Bytes(), 0) {
+			if !wire.IsAll(data.Bytes(), 0) {
 				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
 			}
 
@@ -581,7 +581,7 @@ func parseData(fullContents []byte, fromClient bool) error {
 			if err != nil {
 				return fmt.Errorf("could not read value: %w", err)
 			}
-			if !isAll(data.Bytes(), 0) {
+			if !wire.IsAll(data.Bytes(), 0) {
 				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
 			}
 
@@ -593,7 +593,7 @@ func parseData(fullContents []byte, fromClient bool) error {
 			if err != nil {
 				return fmt.Errorf("could not read result: %w", err)
 			}
-			if !isAll(data.Bytes(), 0) {
+			if !wire.IsAll(data.Bytes(), 0) {
 				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
 			}
 			logrus.Infof("Result: %d", result)
@@ -704,7 +704,7 @@ func parseData(fullContents []byte, fromClient bool) error {
 			if err != nil {
 				return fmt.Errorf("could not read result: %w", err)
 			}
-			if !isAll(data.Bytes(), 0) {
+			if !wire.IsAll(data.Bytes(), 0) {
 				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
 			}
 			logrus.Infof("Result: %d", result)
@@ -717,7 +717,7 @@ func parseData(fullContents []byte, fromClient bool) error {
 		logrus.Infof("Function: Search .net equipment")
 		if fromClient {
 			// TODO: We seem to send "1" as the first byte.
-			if !isAll(data.Bytes(), 0) {
+			if !wire.IsAll(data.Bytes(), 0) {
 				logrus.Warnf("Unexpected data; should be all zeros: %X", data.Bytes())
 			}
 		} else {
@@ -742,7 +742,7 @@ func parseData(fullContents []byte, fromClient bool) error {
 				return fmt.Errorf("could not read port: %w", err)
 			}
 			// All remaining bytes are reserved.
-			if !isAll(data.Bytes(), 0) {
+			if !wire.IsAll(data.Bytes(), 0) {
 				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
 			}
 
@@ -765,13 +765,4 @@ func parseData(fullContents []byte, fromClient bool) error {
 		logrus.Warnf("TODO UNHANDLED FUNCTION: %X", envelope.Function)
 	}
 	return nil
-}
-
-func isAll(data []byte, expectedValue byte) bool {
-	for _, b := range data {
-		if b != expectedValue {
-			return false
-		}
-	}
-	return true
 }

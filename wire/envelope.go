@@ -10,9 +10,9 @@ const (
 )
 
 type Envelope struct {
-	BoardAddress uint16 // This is the board address.  It appears to be the last 2 bytes of the MAC address.
-	Function     uint16 // This is the function.
-	Contents     []byte // This is the contents of the message.
+	BoardAddress uint16     // This is the board address.  It appears to be the last 2 bytes of the MAC address.
+	Function     uint16     // This is the function.
+	Contents     RawMessage // This is the contents of the message.
 }
 
 func (e *Envelope) Encode() ([]byte, error) {
