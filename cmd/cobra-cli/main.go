@@ -1,11 +1,8 @@
 package main
 
 import (
-	"fmt"
-	"net"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -17,7 +14,7 @@ func main() {
 	var controllerPort int
 	var boardAddressString string
 	var boardAddress uint16
-	var conn net.Conn
+	var client *wire.Client
 	verbose := false
 
 	rootCommand := &cobra.Command{
@@ -40,11 +37,10 @@ func main() {
 			}
 
 			if controllerAddress != "" && controllerPort > 0 && boardAddress > 0 {
-				var err error
-				conn, err = net.Dial("tcp", fmt.Sprintf("%s:%d", controllerAddress, controllerPort))
-				if err != nil {
-					logrus.Errorf("Could not connect to controller: %v", err)
-					os.Exit(1)
+				client = &wire.Client{
+					ControllerAddress: controllerAddress,
+					ControllerPort:    controllerPort,
+					BoardAddress:      boardAddress,
 				}
 			}
 		},
@@ -64,59 +60,28 @@ func main() {
 			Short: "Gather information",
 			Long:  ``,
 			Run: func(cmd *cobra.Command, args []string) {
-				if conn == nil {
-					logrus.Errorf("Invalid connection")
+				if client == nil {
+					logrus.Errorf("Invalid client")
 					os.Exit(1)
 				}
 
 				{
-					conn.SetDeadline(time.Now().Add(5 * time.Second))
-
-					envelope := wire.Envelope{
-						BoardAddress: boardAddress,
-						Function:     wire.FunctionGetBasicInfo,
-					}
-					contents, err := wire.Encode(&envelope)
-					if err != nil {
-						logrus.Errorf("Could not encode envelope: %v", err)
-						os.Exit(1)
-					}
-					bytesWritten, err := conn.Write(contents)
-					if err != nil {
-						logrus.Errorf("Could not write contents: %v", err)
-						os.Exit(1)
-					}
-					logrus.Infof("Bytes written: %d", bytesWritten)
-					if bytesWritten != len(contents) {
-						logrus.Errorf("Could not write full contents; wrote %d bytes (expected: %d)", bytesWritten, len(contents))
-						os.Exit(1)
-					}
-				}
-
-				{
-					conn.SetDeadline(time.Now().Add(5 * time.Second))
-
-					contents := make([]byte, 1024)
-					bytesRead, err := conn.Read(contents)
-					if err != nil {
-						logrus.Errorf("Could not read contents: %v", err)
-						os.Exit(1)
-					}
-					contents = contents[0:bytesRead]
-					logrus.Infof("Bytes read: (%d) %x", bytesRead, contents)
-
-					var envelope wire.Envelope
-					err = wire.Decode(contents, &envelope)
-					if err != nil {
-						logrus.Errorf("Could not read contents: %v", err)
-						os.Exit(1)
-					}
-					logrus.Debugf("Response: %x", envelope.Contents)
-
 					var response wire.GetBasicInfoResponse
-					err = wire.Decode(envelope.Contents, &response)
+					err := client.Raw(wire.FunctionGetBasicInfo, nil, &response)
 					if err != nil {
-						logrus.Errorf("Could not decode response: %v", err)
+						logrus.Errorf("Error: %v", err)
+						os.Exit(1)
+					}
+					logrus.Infof("Response: %+v", response)
+				}
+				{
+					request := &wire.GetNetworkInfoRequest{
+						Unknown1: 1,
+					}
+					var response wire.GetNetworkInfoResponse
+					err := client.Raw(wire.FunctionGetNetworkInfo, request, &response)
+					if err != nil {
+						logrus.Errorf("Error: %v", err)
 						os.Exit(1)
 					}
 					logrus.Infof("Response: %+v", response)
