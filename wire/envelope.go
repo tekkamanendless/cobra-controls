@@ -20,6 +20,10 @@ func (e *Envelope) Encode() ([]byte, error) {
 	w.WriteUint16(e.BoardAddress)
 	w.WriteUint16(e.Function)
 	w.WriteBytes(e.Contents)
+	// Pad the contents to 26 bytes.  More than 26 bytes is fine.
+	for i := 0; i < 26-len(e.Contents); i++ {
+		w.WriteUint8(0)
+	}
 
 	internalContents := w.Bytes()
 	checksum := uint16(0)
@@ -43,10 +47,17 @@ func (e *Envelope) Decode(contents []byte) error {
 	if err != nil {
 		return fmt.Errorf("could not read start byte: %w", err)
 	}
+	if startByte != EnvelopeStartByte {
+		return fmt.Errorf("invalid start byte: 0x%x (expected: 0x%x)", startByte, EnvelopeStartByte)
+	}
 
 	internalContents, err := r.ReadBytes(r.Length() - 3) // 2 bytes for the checksum and 1 for the end byte.
 	if err != nil {
 		return fmt.Errorf("could not read internal contents: %w", err)
+	}
+
+	if r.Length() != 3 {
+		return fmt.Errorf("somehow did not read enough data; length is %d (expected: %d)", r.Length(), 3)
 	}
 
 	expectedChecksum, err := r.ReadUint16()
@@ -57,17 +68,14 @@ func (e *Envelope) Decode(contents []byte) error {
 	if err != nil {
 		return fmt.Errorf("could not read end byte: %w", err)
 	}
+	if endByte != EnvelopeEndByte {
+		return fmt.Errorf("invalid end byte: 0x%x (expected: 0x%x)", endByte, EnvelopeEndByte)
+	}
 
 	if r.Length() != 0 {
 		return fmt.Errorf("somehow did not read enough data; length is %d", r.Length())
 	}
 
-	if startByte != EnvelopeStartByte {
-		return fmt.Errorf("invalid start byte: 0x%x (expected: 0x%x)", startByte, EnvelopeStartByte)
-	}
-	if endByte != EnvelopeEndByte {
-		return fmt.Errorf("invalid end byte: 0x%x (expected: 0x%x)", endByte, EnvelopeEndByte)
-	}
 	actualChecksum := uint16(0)
 	for i := 0; i < len(internalContents); i++ {
 		actualChecksum += uint16(internalContents[i])
