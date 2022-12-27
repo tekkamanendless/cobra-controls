@@ -33,7 +33,7 @@ func (r *GetOperationStatusRequest) Decode(b []byte) error {
 type Record struct {
 	IDNumber    uint16
 	AreaNumber  uint8
-	RecordStart uint8
+	RecordState uint8
 	BrushDate   time.Time
 	BrushTime   time.Time
 }
@@ -42,7 +42,7 @@ func (r *Record) Encode() ([]byte, error) {
 	writer := NewWriter()
 	writer.WriteUint16(r.IDNumber)
 	writer.WriteUint8(r.AreaNumber)
-	writer.WriteUint8(r.RecordStart)
+	writer.WriteUint8(r.RecordState)
 	writer.WriteDate(r.BrushDate)
 	writer.WriteTime(r.BrushTime)
 	return writer.Bytes(), nil
@@ -59,9 +59,9 @@ func (r *Record) Decode(b []byte) error {
 	if err != nil {
 		return fmt.Errorf("could not read area number: %v", err)
 	}
-	r.RecordStart, err = reader.ReadUint8()
+	r.RecordState, err = reader.ReadUint8()
 	if err != nil {
-		return fmt.Errorf("could not read record start: %v", err)
+		return fmt.Errorf("could not read record state: %v", err)
 	}
 	r.BrushDate, err = reader.ReadDate()
 	if err != nil {
