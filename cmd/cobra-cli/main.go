@@ -131,7 +131,7 @@ func main() {
 						os.Exit(1)
 					}
 					logrus.Infof("Response: %+v", response)
-					if response.RecordCount != nextNumber {
+					if response.RecordCount >= nextNumber {
 						if nextNumber > 0 && response.RecordCount >= nextNumber {
 							for index := nextNumber; index <= response.RecordCount; index++ {
 								logrus.Infof("Geting record %d", index)

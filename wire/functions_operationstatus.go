@@ -31,11 +31,10 @@ func (r *GetOperationStatusRequest) Decode(b []byte) error {
 }
 
 type Record struct {
-	IDNumber    uint16
-	AreaNumber  uint8
-	RecordState uint8
-	BrushDate   time.Time
-	BrushTime   time.Time
+	IDNumber      uint16
+	AreaNumber    uint8
+	RecordState   uint8
+	BrushDateTime time.Time
 }
 
 func (r *Record) Encode() ([]byte, error) {
@@ -43,8 +42,8 @@ func (r *Record) Encode() ([]byte, error) {
 	writer.WriteUint16(r.IDNumber)
 	writer.WriteUint8(r.AreaNumber)
 	writer.WriteUint8(r.RecordState)
-	writer.WriteDate(r.BrushDate)
-	writer.WriteTime(r.BrushTime)
+	writer.WriteDate(r.BrushDateTime)
+	writer.WriteTime(r.BrushDateTime)
 	return writer.Bytes(), nil
 }
 
@@ -63,14 +62,15 @@ func (r *Record) Decode(b []byte) error {
 	if err != nil {
 		return fmt.Errorf("could not read record state: %v", err)
 	}
-	r.BrushDate, err = reader.ReadDate()
+	brushDate, err := reader.ReadDate()
 	if err != nil {
 		return fmt.Errorf("could not read brush date: %v", err)
 	}
-	r.BrushTime, err = reader.ReadTime()
+	brushTime, err := reader.ReadTime()
 	if err != nil {
 		return fmt.Errorf("could not read brush time: %v", err)
 	}
+	r.BrushDateTime = MergeDateTime(brushDate, brushTime)
 	if reader.Length() > 0 {
 		return fmt.Errorf("unexpected contents: %x", reader.Bytes())
 	}
