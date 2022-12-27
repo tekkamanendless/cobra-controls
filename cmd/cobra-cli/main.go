@@ -119,6 +119,21 @@ func main() {
 					}
 					logrus.Infof("Response: %+v", response)
 					if response.RecordCount != lastNumber {
+						if response.RecordCount > lastNumber {
+							for index := lastNumber + 1; index <= response.RecordCount; index++ {
+								logrus.Infof("TODO: Get record %d", index)
+								request := wire.GetOperationStatusRequest{
+									RecordIndex: index,
+								}
+								var response wire.GetOperationStatusResponse
+								err := client.Raw(wire.FunctionGetOperationStatus, &request, &response)
+								if err != nil {
+									logrus.Errorf("Error: %v", err)
+									os.Exit(1)
+								}
+								logrus.Infof("Response: %+v", response)
+							}
+						}
 						lastNumber = response.RecordCount
 					}
 
