@@ -31,10 +31,10 @@ func (r *GetOperationStatusRequest) Decode(b []byte) error {
 }
 
 type Record struct {
-	IDNumber      uint16
-	AreaNumber    uint8
-	RecordState   uint8
-	BrushDateTime time.Time
+	IDNumber      uint16    // "${AreaNumber}${IDNumber}" is the fob ID in the UI.
+	AreaNumber    uint8     // "${AreaNumber}${IDNumber}" is the fob ID in the UI.
+	RecordState   uint8     // TODO: This appears to be the door.
+	BrushDateTime time.Time // This is the time of the access.
 }
 
 func (r *Record) Encode() ([]byte, error) {
@@ -78,10 +78,10 @@ func (r *Record) Decode(b []byte) error {
 }
 
 type GetOperationStatusResponse struct {
-	CurrentTime   time.Time
-	RecordCount   uint32
-	PopedomAmount uint16
-	Record        *Record
+	CurrentTime   time.Time // TODO: This is supposed to be the time, but the format makes no sense.
+	RecordCount   uint32    // This is the number of access records available.
+	PopedomAmount uint16    // TODO: Is the number of fobs registered on the door?
+	Record        *Record   // This is the access record for the index requested.
 	RelayStatus   uint8
 	MagnetState   uint8
 	Reserved1     uint8
