@@ -108,7 +108,7 @@ func main() {
 					os.Exit(1)
 				}
 
-				var lastNumber uint32
+				var nextNumber uint32 // If this is zero, then we'll ask for the latest value.
 				for batch := 0; ; batch++ {
 					if batchCount > 0 {
 						if batch >= batchCount {
@@ -120,9 +120,9 @@ func main() {
 						time.Sleep(sleepDuration)
 					}
 
-					logrus.Infof("Last number: %d", lastNumber)
+					logrus.Infof("Next number: %d", nextNumber)
 					request := wire.GetOperationStatusRequest{
-						RecordIndex: lastNumber,
+						RecordIndex: nextNumber,
 					}
 					var response wire.GetOperationStatusResponse
 					err := client.Raw(wire.FunctionGetOperationStatus, &request, &response)
@@ -131,10 +131,10 @@ func main() {
 						os.Exit(1)
 					}
 					logrus.Infof("Response: %+v", response)
-					if response.RecordCount != lastNumber {
-						if response.RecordCount > lastNumber && lastNumber > 0 {
-							for index := lastNumber + 1; index <= response.RecordCount; index++ {
-								logrus.Infof("TODO: Get record %d", index)
+					if response.RecordCount != nextNumber {
+						if nextNumber > 0 && response.RecordCount >= nextNumber {
+							for index := nextNumber; index <= response.RecordCount; index++ {
+								logrus.Infof("Geting record %d", index)
 								request := wire.GetOperationStatusRequest{
 									RecordIndex: index,
 								}
@@ -150,7 +150,7 @@ func main() {
 								}
 							}
 						}
-						lastNumber = response.RecordCount
+						nextNumber = response.RecordCount + 1
 					}
 				}
 			},
