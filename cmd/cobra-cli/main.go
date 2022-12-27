@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -42,6 +43,7 @@ func main() {
 					ControllerPort:    controllerPort,
 					BoardAddress:      boardAddress,
 				}
+				logrus.Debugf("Client: %+v", client)
 			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
@@ -98,7 +100,30 @@ func main() {
 			Short: "Monitor a door",
 			Long:  ``,
 			Run: func(cmd *cobra.Command, args []string) {
-				// TODO
+				if client == nil {
+					logrus.Errorf("Invalid client")
+					os.Exit(1)
+				}
+
+				var lastNumber uint32
+				for {
+					logrus.Infof("Last number: %d", lastNumber)
+					request := wire.GetOperationStatusRequest{
+						RecordIndex: lastNumber,
+					}
+					var response wire.GetOperationStatusResponse
+					err := client.Raw(wire.FunctionGetOperationStatus, &request, &response)
+					if err != nil {
+						logrus.Errorf("Error: %v", err)
+						os.Exit(1)
+					}
+					logrus.Infof("Response: %+v", response)
+					if response.RecordCount != lastNumber {
+						lastNumber = response.RecordCount
+					}
+
+					time.Sleep(1 * time.Second)
+				}
 			},
 		}
 

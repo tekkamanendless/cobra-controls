@@ -18,15 +18,18 @@ type Client struct {
 
 func (c *Client) init() error {
 	if c.conn == nil {
+		logrus.Debugf("Creating connection.")
 		if c.ControllerPort == 0 {
 			c.ControllerPort = 60000
 		}
 
 		var err error
+		logrus.Debugf("Dialing: %s:%d", c.ControllerAddress, c.ControllerPort)
 		c.conn, err = net.Dial("tcp", fmt.Sprintf("%s:%d", c.ControllerAddress, c.ControllerPort))
 		if err != nil {
 			return err
 		}
+		logrus.Debugf("Connected.")
 	}
 	return nil
 }
