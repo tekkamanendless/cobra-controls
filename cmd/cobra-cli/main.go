@@ -109,7 +109,7 @@ func main() {
 				}
 
 				var lastNumber uint32
-				for batch := 0; ; batchCount++ {
+				for batch := 0; ; batch++ {
 					if batchCount > 0 {
 						if batch >= batchCount {
 							break
