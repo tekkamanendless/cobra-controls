@@ -95,6 +95,9 @@ func main() {
 	}
 
 	{
+		var batchCount int
+		var sleepDuration time.Duration
+
 		cmd := &cobra.Command{
 			Use:   "monitor",
 			Short: "Monitor a door",
@@ -106,7 +109,17 @@ func main() {
 				}
 
 				var lastNumber uint32
-				for {
+				for batch := 0; ; batchCount++ {
+					if batchCount > 0 {
+						if batch >= batchCount {
+							break
+						}
+					}
+					if batch > 0 {
+						logrus.Infof("Sleeping for %v.", sleepDuration)
+						time.Sleep(sleepDuration)
+					}
+
 					logrus.Infof("Last number: %d", lastNumber)
 					request := wire.GetOperationStatusRequest{
 						RecordIndex: lastNumber,
@@ -119,7 +132,7 @@ func main() {
 					}
 					logrus.Infof("Response: %+v", response)
 					if response.RecordCount != lastNumber {
-						if response.RecordCount > lastNumber {
+						if response.RecordCount > lastNumber && lastNumber > 0 {
 							for index := lastNumber + 1; index <= response.RecordCount; index++ {
 								logrus.Infof("TODO: Get record %d", index)
 								request := wire.GetOperationStatusRequest{
@@ -132,15 +145,18 @@ func main() {
 									os.Exit(1)
 								}
 								logrus.Infof("Response: %+v", response)
+								if response.Record != nil {
+									logrus.Infof("Record: %+v", *response.Record)
+								}
 							}
 						}
 						lastNumber = response.RecordCount
 					}
-
-					time.Sleep(1 * time.Second)
 				}
 			},
 		}
+		cmd.Flags().IntVar(&batchCount, "batch", 10, "How many iterations to run (use 0 for infinite)")
+		cmd.Flags().DurationVar(&sleepDuration, "batch-interval", 5*time.Second, "How long to wait between batches")
 
 		rootCommand.AddCommand(cmd)
 	}

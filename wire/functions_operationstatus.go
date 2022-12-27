@@ -8,7 +8,7 @@ import (
 )
 
 type GetOperationStatusRequest struct {
-	RecordIndex uint32
+	RecordIndex uint32 // 0x0 and 0xFFFFFFFF mean "latest".
 }
 
 func (r *GetOperationStatusRequest) Encode() ([]byte, error) {

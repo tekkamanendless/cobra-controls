@@ -65,7 +65,7 @@ func (c *Client) Raw(f uint16, e Encoder, d Decoder) error {
 		if err != nil {
 			return fmt.Errorf("could not write message: %v", err)
 		}
-		logrus.Infof("Bytes written: %d", bytesWritten)
+		logrus.Debugf("Bytes written: %d", bytesWritten)
 		if bytesWritten != len(messageBytes) {
 			return fmt.Errorf("could not write full message; wrote %d bytes (expected: %d)", bytesWritten, len(messageBytes))
 		}
@@ -80,7 +80,7 @@ func (c *Client) Raw(f uint16, e Encoder, d Decoder) error {
 			return fmt.Errorf("could not read contents: %v", err)
 		}
 		contents = contents[0:bytesRead]
-		logrus.Infof("Bytes read: (%d) %x", bytesRead, contents)
+		logrus.Debugf("Bytes read: (%d) %x", bytesRead, contents)
 
 		var envelope Envelope
 		err = Decode(contents, &envelope)
