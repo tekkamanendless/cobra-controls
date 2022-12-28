@@ -92,13 +92,17 @@ type GetOperationStatusResponse struct {
 
 func (r *GetOperationStatusResponse) Encode() ([]byte, error) {
 	writer := NewWriter()
-	writer.WriteUint8(uint8(r.CurrentTime.Year()))
-	writer.WriteUint8(uint8(r.CurrentTime.Month()))
-	writer.WriteUint8(uint8(r.CurrentTime.Day()))
-	writer.WriteUint8(uint8(r.CurrentTime.Weekday())) // TODO: ????
-	writer.WriteUint8(uint8(r.CurrentTime.Hour()))
-	writer.WriteUint8(uint8(r.CurrentTime.Minute()))
-	writer.WriteUint8(uint8(r.CurrentTime.Second()))
+	year := r.CurrentTime.Year()
+	if year > 2000 {
+		year -= 2000
+	}
+	writer.WriteUint8(InsaneBase10ToBase16(uint8(year)))
+	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Month())))
+	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Day())))
+	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Weekday()))) // This appears to be the day of the week.
+	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Hour())))
+	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Minute())))
+	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Second())))
 	writer.WriteUint24(r.RecordCount)
 	writer.WriteUint16(r.PopedomAmount)
 	if r.Record == nil {
@@ -130,31 +134,38 @@ func (r *GetOperationStatusResponse) Decode(b []byte) error {
 	if err != nil {
 		return fmt.Errorf("could not read year: %w", err)
 	}
+	year = InsaneBase16ToBase10(year)
 	month, err := reader.ReadUint8()
 	if err != nil {
 		return fmt.Errorf("could not read month: %w", err)
 	}
+	month = InsaneBase16ToBase10(month)
 	day, err := reader.ReadUint8()
 	if err != nil {
 		return fmt.Errorf("could not read day: %w", err)
 	}
+	day = InsaneBase16ToBase10(day)
 	week, err := reader.ReadUint8()
 	if err != nil {
 		return fmt.Errorf("could not read week: %w", err)
 	}
+	week = InsaneBase16ToBase10(week)
 	hour, err := reader.ReadUint8()
 	if err != nil {
 		return fmt.Errorf("could not read hour: %w", err)
 	}
+	hour = InsaneBase16ToBase10(hour)
 	minute, err := reader.ReadUint8()
 	if err != nil {
 		return fmt.Errorf("could not read minute: %w", err)
 	}
+	minute = InsaneBase16ToBase10(minute)
 	second, err := reader.ReadUint8()
 	if err != nil {
 		return fmt.Errorf("could not read second: %w", err)
 	}
-	r.CurrentTime = time.Date(int(year), time.Month(month), int(day), int(hour), int(minute), int(second), 0, time.UTC)
+	second = InsaneBase16ToBase10(second)
+	r.CurrentTime = time.Date(2000+int(year), time.Month(month), int(day), int(hour), int(minute), int(second), 0, time.UTC)
 	_ = week
 
 	r.RecordCount, err = reader.ReadUint24()
