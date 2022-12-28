@@ -95,7 +95,7 @@ func main() {
 					data := packet.TransportLayer().LayerPayload()
 					logrus.Debugf("Data (%d): %X", len(data), data)
 
-					err = parseData(data, fromClient)
+					err = parseData(data, fromClient, personnelList)
 					if err != nil {
 						logrus.Warnf("Could not parse data: [%T] %v", err, err)
 					}
@@ -114,7 +114,7 @@ func main() {
 	os.Exit(0)
 }
 
-func parseData(fullContents []byte, fromClient bool) error {
+func parseData(fullContents []byte, fromClient bool, personnelList cobrafile.PersonnelList) error {
 	if fromClient {
 		logrus.Infof("Mode: Client")
 	} else {
@@ -216,6 +216,12 @@ func parseData(fullContents []byte, fromClient bool) error {
 			logrus.Infof("   Card number: %d", cardNumber)
 			logrus.Infof("   User number: %d", userNumber)
 			logrus.Infof("   Card ID: %s", wire.CardID(userNumber, cardNumber))
+			if personnelList != nil {
+				if person := personnelList.FindByCardID(wire.CardID(userNumber, cardNumber)); person != nil {
+					logrus.Infof("   Person: %+v", *person)
+				}
+			}
+			logrus.Infof("   ")
 			logrus.Infof("   Brush card state: %d", brushCardState)
 			logrus.Infof("   Brush date: %v", brushCardDate)
 			logrus.Infof("   Brush time: %v", brushCardTime)
@@ -414,6 +420,11 @@ func parseData(fullContents []byte, fromClient bool) error {
 			logrus.Infof("ID: %d", id)
 			logrus.Infof("User number: %d", userNumber)
 			logrus.Infof("Card ID: %s", wire.CardID(userNumber, id))
+			if personnelList != nil {
+				if person := personnelList.FindByCardID(wire.CardID(userNumber, id)); person != nil {
+					logrus.Infof("   Person: %+v", *person)
+				}
+			}
 			logrus.Infof("Door number: %d", doorNumber)
 			logrus.Infof("Start date: %v", startDate)
 			logrus.Infof("End date: %v", endDate)
@@ -599,6 +610,11 @@ func parseData(fullContents []byte, fromClient bool) error {
 				logrus.Infof("ID: %d", id)
 				logrus.Infof("Area: %d", area)
 				logrus.Infof("Card ID: %s", wire.CardID(area, id))
+				if personnelList != nil {
+					if person := personnelList.FindByCardID(wire.CardID(area, id)); person != nil {
+						logrus.Infof("   Person: %+v", *person)
+					}
+				}
 				logrus.Infof("Door: %d", door)
 				logrus.Infof("Open Date: %v", openDate)
 				logrus.Infof("Close Date: %v", closeDate)

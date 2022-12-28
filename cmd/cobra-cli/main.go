@@ -173,6 +173,11 @@ func main() {
 								logrus.Infof("Response: %+v", response)
 								if response.Record != nil {
 									logrus.Infof("Record: %+v", *response.Record)
+									if personnelList != nil {
+										if person := personnelList.FindByCardID(wire.CardID(response.Record.AreaNumber, response.Record.IDNumber)); person != nil {
+											logrus.Infof("   Person: %+v", *person)
+										}
+									}
 								}
 							}
 						}

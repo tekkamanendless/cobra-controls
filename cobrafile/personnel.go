@@ -62,6 +62,8 @@ func LoadPersonnel(filename string) (PersonnelList, error) {
 				p.Number = int(v)
 			case "worker no":
 				p.WorkerNumber = value
+			case "name":
+				p.Name = value
 			case "card id":
 				p.CardID = value
 			case "department":
@@ -84,4 +86,13 @@ func LoadPersonnel(filename string) (PersonnelList, error) {
 		result = append(result, p)
 	}
 	return result, nil
+}
+
+func (l PersonnelList) FindByCardID(cardID string) *Person {
+	for _, person := range l {
+		if person.CardID == cardID {
+			return &person
+		}
+	}
+	return nil
 }
