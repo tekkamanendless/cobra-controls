@@ -81,9 +81,9 @@ func main() {
 				for _, controller := range controllerList {
 					if ok, _ := path.Match(controllerName, controller.Name); ok {
 						client := &wire.Client{
-							ControllerAddress: controllerAddress,
-							ControllerPort:    controllerPort,
-							BoardAddress:      boardAddress,
+							ControllerAddress: controller.Address,
+							ControllerPort:    controller.Port,
+							BoardAddress:      controller.SN,
 						}
 						logrus.Debugf("Client: %+v", client)
 						clients = append(clients, client)
