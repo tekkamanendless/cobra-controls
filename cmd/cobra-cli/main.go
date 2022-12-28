@@ -7,6 +7,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"gitlab.com/doug-manley/cobra-controls/cobrafile"
 	"gitlab.com/doug-manley/cobra-controls/wire"
 )
 
@@ -15,7 +16,12 @@ func main() {
 	var controllerPort int
 	var boardAddressString string
 	var boardAddress uint16
+	var controllerFile string
+	var personnelFile string
+
 	var client *wire.Client
+	var controllerList cobrafile.ControllerList
+	var personnelList cobrafile.PersonnelList
 	verbose := false
 
 	rootCommand := &cobra.Command{
@@ -25,6 +31,24 @@ func main() {
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			if verbose {
 				logrus.SetLevel(logrus.DebugLevel)
+			}
+
+			if controllerFile != "" {
+				var err error
+				controllerList, err = cobrafile.LoadController(controllerFile)
+				if err != nil {
+					logrus.Warnf("Could not load controller file: %v", err)
+				}
+				logrus.Infof("Controllers: (%d)", len(controllerList))
+			}
+
+			if personnelFile != "" {
+				var err error
+				personnelList, err = cobrafile.LoadPersonnel(personnelFile)
+				if err != nil {
+					logrus.Warnf("Could not load personnel file: %v", err)
+				}
+				logrus.Infof("Personnel: (%d)", len(personnelList))
 			}
 
 			if len(boardAddressString) > 0 {
@@ -54,6 +78,8 @@ func main() {
 	rootCommand.PersistentFlags().StringVar(&controllerAddress, "controller-address", "", "Set the controller address")
 	rootCommand.PersistentFlags().IntVar(&controllerPort, "controller-port", 60000, "Set the controller address")
 	rootCommand.PersistentFlags().StringVar(&boardAddressString, "board-address", "", "Set the board address (either hexadecimal or decimial)")
+	rootCommand.PersistentFlags().StringVar(&controllerFile, "controller-file", "", "Use this CSV file to load the controller information")
+	rootCommand.PersistentFlags().StringVar(&personnelFile, "personnel-file", "", "Use this CSV file to load the personnel information")
 	rootCommand.PersistentFlags().BoolVar(&verbose, "verbose", false, "Enable verbose output")
 
 	{

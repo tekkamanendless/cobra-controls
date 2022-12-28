@@ -1,76 +1,117 @@
 package main
 
 import (
-	"flag"
 	"fmt"
+	"os"
 	"strconv"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+	"gitlab.com/doug-manley/cobra-controls/cobrafile"
 	"gitlab.com/doug-manley/cobra-controls/wire"
 )
 
 func main() {
-	verbose := flag.Bool("verbose", false, "Enable verbose logging")
-	flag.Parse()
-	logrus.Infof("verbose: %t", *verbose)
-	if *verbose {
-		logrus.Infof("Enabling verbose logging.")
-		logrus.SetLevel(logrus.DebugLevel)
-	}
-	filenames := flag.Args()
+	var controllerFile string
+	var personnelFile string
 
-	filterPacket := func(packet gopacket.Packet) bool {
-		if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
-			logrus.Debugf("This is a TCP packet.")
-			tcp, _ := tcpLayer.(*layers.TCP)
-			logrus.Debugf("From src port %d to dst port %d.", tcp.SrcPort, tcp.DstPort)
-			if tcp.SrcPort != 60000 && tcp.DstPort != 60000 {
-				return false
+	var controllerList cobrafile.ControllerList
+	var personnelList cobrafile.PersonnelList
+	verbose := false
+
+	rootCommand := &cobra.Command{
+		Use:   "cobra-cli",
+		Short: "Command-line tools for Cobra Controls access systems",
+		Long:  ``,
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			if verbose {
+				logrus.SetLevel(logrus.DebugLevel)
 			}
-		} else {
-			return false
-		}
-		if len(packet.TransportLayer().LayerPayload()) == 0 {
-			return false
-		}
-		return true
-	}
 
-	for _, filename := range filenames {
-		logrus.Infof("File: %s", filename)
-		handle, err := pcap.OpenOffline(filename)
-		if err != nil {
-			logrus.Errorf("Error opening file: [%T] %v", err, err)
-			continue
-		}
-		packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-		for packet := range packetSource.Packets() {
-			if !filterPacket(packet) {
-				continue
+			if controllerFile != "" {
+				var err error
+				controllerList, err = cobrafile.LoadController(controllerFile)
+				if err != nil {
+					logrus.Warnf("Could not load controller file: %v", err)
+				}
+				logrus.Infof("Controllers: (%d)", len(controllerList))
 			}
-			logrus.Infof("--------------------")
 
-			fromClient := false
-			if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
-				if tcp, ok := tcpLayer.(*layers.TCP); ok {
-					if tcp.DstPort == 60000 {
-						fromClient = true
+			if personnelFile != "" {
+				var err error
+				personnelList, err = cobrafile.LoadPersonnel(personnelFile)
+				if err != nil {
+					logrus.Warnf("Could not load personnel file: %v", err)
+				}
+				logrus.Infof("Personnel: (%d)", len(personnelList))
+			}
+		},
+		Run: func(cmd *cobra.Command, args []string) {
+			filenames := args
+
+			filterPacket := func(packet gopacket.Packet) bool {
+				if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
+					logrus.Debugf("This is a TCP packet.")
+					tcp, _ := tcpLayer.(*layers.TCP)
+					logrus.Debugf("From src port %d to dst port %d.", tcp.SrcPort, tcp.DstPort)
+					if tcp.SrcPort != 60000 && tcp.DstPort != 60000 {
+						return false
+					}
+				} else {
+					return false
+				}
+				if len(packet.TransportLayer().LayerPayload()) == 0 {
+					return false
+				}
+				return true
+			}
+
+			for _, filename := range filenames {
+				logrus.Infof("File: %s", filename)
+				handle, err := pcap.OpenOffline(filename)
+				if err != nil {
+					logrus.Errorf("Error opening file: [%T] %v", err, err)
+					continue
+				}
+				packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+				for packet := range packetSource.Packets() {
+					if !filterPacket(packet) {
+						continue
+					}
+					logrus.Infof("--------------------")
+
+					fromClient := false
+					if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
+						if tcp, ok := tcpLayer.(*layers.TCP); ok {
+							if tcp.DstPort == 60000 {
+								fromClient = true
+							}
+						}
+					}
+
+					data := packet.TransportLayer().LayerPayload()
+					logrus.Debugf("Data (%d): %X", len(data), data)
+
+					err = parseData(data, fromClient)
+					if err != nil {
+						logrus.Warnf("Could not parse data: [%T] %v", err, err)
 					}
 				}
 			}
-
-			data := packet.TransportLayer().LayerPayload()
-			logrus.Debugf("Data (%d): %X", len(data), data)
-
-			err = parseData(data, fromClient)
-			if err != nil {
-				logrus.Warnf("Could not parse data: [%T] %v", err, err)
-			}
-		}
+		},
 	}
+	rootCommand.PersistentFlags().StringVar(&controllerFile, "controller-file", "", "Use this CSV file to load the controller information")
+	rootCommand.PersistentFlags().StringVar(&personnelFile, "personnel-file", "", "Use this CSV file to load the personnel information")
+	rootCommand.PersistentFlags().BoolVar(&verbose, "verbose", false, "Enable verbose output")
+
+	err := rootCommand.Execute()
+	if err != nil {
+		logrus.Errorf("Error: %v", err)
+	}
+	os.Exit(0)
 }
 
 func parseData(fullContents []byte, fromClient bool) error {
