@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -142,11 +143,11 @@ func main() {
 						}
 					}
 					if batch > 0 {
-						logrus.Infof("Sleeping for %v.", sleepDuration)
+						logrus.Debugf("Sleeping for %v.", sleepDuration)
 						time.Sleep(sleepDuration)
 					}
 
-					logrus.Infof("Next number: %d", nextNumber)
+					logrus.Debugf("Next number: %d", nextNumber)
 					request := wire.GetOperationStatusRequest{
 						RecordIndex: nextNumber,
 					}
@@ -156,11 +157,11 @@ func main() {
 						logrus.Errorf("Error: %v", err)
 						os.Exit(1)
 					}
-					logrus.Infof("Response: %+v", response)
+					logrus.Debugf("Response: %+v", response)
 					if response.RecordCount >= nextNumber {
 						if nextNumber > 0 && response.RecordCount >= nextNumber {
 							for index := nextNumber; index <= response.RecordCount; index++ {
-								logrus.Infof("Geting record %d", index)
+								logrus.Debugf("Geting record %d", index)
 								request := wire.GetOperationStatusRequest{
 									RecordIndex: index,
 								}
@@ -170,13 +171,27 @@ func main() {
 									logrus.Errorf("Error: %v", err)
 									os.Exit(1)
 								}
-								logrus.Infof("Response: %+v", response)
+								logrus.Debugf("Response: %+v", response)
 								if response.Record != nil {
-									logrus.Infof("Record: %+v", *response.Record)
+									logrus.Debugf("Record: %+v", *response.Record)
+									var person *cobrafile.Person
+									var controller, door string
+									if controllerList != nil {
+										controller, door = controllerList.LookupNameAndDoor(client.ControllerAddress, response.Record.RecordState)
+									}
 									if personnelList != nil {
-										if person := personnelList.FindByCardID(wire.CardID(response.Record.AreaNumber, response.Record.IDNumber)); person != nil {
-											logrus.Infof("   Person: %+v", *person)
-										}
+										person = personnelList.FindByCardID(wire.CardID(response.Record.AreaNumber, response.Record.IDNumber))
+									}
+									if controller == "" {
+										controller = client.ControllerAddress
+									}
+									if door == "" {
+										door = fmt.Sprintf("%d", response.Record.RecordState)
+									}
+									if person == nil {
+										fmt.Printf("%v | Controller: %s | Door: %s | Card ID: %s\n", response.Record.BrushDateTime, controller, door, wire.CardID(response.Record.AreaNumber, response.Record.IDNumber))
+									} else {
+										fmt.Printf("%v | Controller: %s | Door: %s | Card ID: %s | Name: %s\n", response.Record.BrushDateTime, controller, door, wire.CardID(response.Record.AreaNumber, response.Record.IDNumber), person.Name)
 									}
 								}
 							}
