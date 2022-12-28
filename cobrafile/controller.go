@@ -102,8 +102,8 @@ func (l ControllerList) LookupDoor(address string, door uint8) string {
 func (l ControllerList) LookupNameAndDoor(address string, door uint8) (string, string) {
 	for _, controller := range l {
 		if controller.Address == address {
-			if door > 0 && int(door) <= len(controller.Doors) {
-				return controller.Name, controller.Doors[door-1]
+			if int(door) < len(controller.Doors) {
+				return controller.Name, controller.Doors[door]
 			}
 			return controller.Name, ""
 		}

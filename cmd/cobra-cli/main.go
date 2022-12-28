@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path"
 	"strconv"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 )
 
 func main() {
+	var controllerName string
 	var controllerAddress string
 	var controllerPort int
 	var boardAddressString string
@@ -20,7 +22,7 @@ func main() {
 	var controllerFile string
 	var personnelFile string
 
-	var client *wire.Client
+	var clients []*wire.Client
 	var controllerList cobrafile.ControllerList
 	var personnelList cobrafile.PersonnelList
 	verbose := false
@@ -40,7 +42,7 @@ func main() {
 				if err != nil {
 					logrus.Warnf("Could not load controller file: %v", err)
 				}
-				logrus.Infof("Controllers: (%d)", len(controllerList))
+				logrus.Debugf("Controllers: (%d)", len(controllerList))
 			}
 
 			if personnelFile != "" {
@@ -49,7 +51,7 @@ func main() {
 				if err != nil {
 					logrus.Warnf("Could not load personnel file: %v", err)
 				}
-				logrus.Infof("Personnel: (%d)", len(personnelList))
+				logrus.Debugf("Personnel: (%d)", len(personnelList))
 			}
 
 			if len(boardAddressString) > 0 {
@@ -59,16 +61,34 @@ func main() {
 					os.Exit(1)
 				}
 				boardAddress = uint16(v)
-				logrus.Infof("Board address: %d (0x%x)", boardAddress, boardAddress)
+				logrus.Debugf("Board address: %d (0x%x)", boardAddress, boardAddress)
 			}
 
 			if controllerAddress != "" && controllerPort > 0 && boardAddress > 0 {
-				client = &wire.Client{
+				client := &wire.Client{
 					ControllerAddress: controllerAddress,
 					ControllerPort:    controllerPort,
 					BoardAddress:      boardAddress,
 				}
 				logrus.Debugf("Client: %+v", client)
+				clients = append(clients, client)
+			} else if controllerName != "" {
+				_, err := path.Match(controllerName, "PLACEHOLDER TEXT")
+				if err != nil {
+					logrus.Errorf("Invalid matching expression: %v", err)
+					os.Exit(1)
+				}
+				for _, controller := range controllerList {
+					if ok, _ := path.Match(controllerName, controller.Name); ok {
+						client := &wire.Client{
+							ControllerAddress: controllerAddress,
+							ControllerPort:    controllerPort,
+							BoardAddress:      boardAddress,
+						}
+						logrus.Debugf("Client: %+v", client)
+						clients = append(clients, client)
+					}
+				}
 			}
 		},
 		Run: func(cmd *cobra.Command, args []string) {
@@ -76,6 +96,7 @@ func main() {
 			os.Exit(1)
 		},
 	}
+	rootCommand.PersistentFlags().StringVar(&controllerName, "controller-name", "", "A wildcard expression to match controllers")
 	rootCommand.PersistentFlags().StringVar(&controllerAddress, "controller-address", "", "Set the controller address")
 	rootCommand.PersistentFlags().IntVar(&controllerPort, "controller-port", 60000, "Set the controller address")
 	rootCommand.PersistentFlags().StringVar(&boardAddressString, "board-address", "", "Set the board address (either hexadecimal or decimial)")
@@ -89,31 +110,33 @@ func main() {
 			Short: "Gather information",
 			Long:  ``,
 			Run: func(cmd *cobra.Command, args []string) {
-				if client == nil {
+				if len(clients) == 0 {
 					logrus.Errorf("Invalid client")
 					os.Exit(1)
 				}
 
-				{
-					var response wire.GetBasicInfoResponse
-					err := client.Raw(wire.FunctionGetBasicInfo, nil, &response)
-					if err != nil {
-						logrus.Errorf("Error: %v", err)
-						os.Exit(1)
+				for _, client := range clients {
+					{
+						var response wire.GetBasicInfoResponse
+						err := client.Raw(wire.FunctionGetBasicInfo, nil, &response)
+						if err != nil {
+							logrus.Errorf("Error: %v", err)
+							os.Exit(1)
+						}
+						logrus.Infof("Response: %+v", response)
 					}
-					logrus.Infof("Response: %+v", response)
-				}
-				{
-					request := &wire.GetNetworkInfoRequest{
-						Unknown1: 1,
+					{
+						request := &wire.GetNetworkInfoRequest{
+							Unknown1: 1,
+						}
+						var response wire.GetNetworkInfoResponse
+						err := client.Raw(wire.FunctionGetNetworkInfo, request, &response)
+						if err != nil {
+							logrus.Errorf("Error: %v", err)
+							os.Exit(1)
+						}
+						logrus.Infof("Response: %+v", response)
 					}
-					var response wire.GetNetworkInfoResponse
-					err := client.Raw(wire.FunctionGetNetworkInfo, request, &response)
-					if err != nil {
-						logrus.Errorf("Error: %v", err)
-						os.Exit(1)
-					}
-					logrus.Infof("Response: %+v", response)
 				}
 			},
 		}
@@ -130,12 +153,12 @@ func main() {
 			Short: "Monitor a door",
 			Long:  ``,
 			Run: func(cmd *cobra.Command, args []string) {
-				if client == nil {
+				if len(clients) == 0 {
 					logrus.Errorf("Invalid client")
 					os.Exit(1)
 				}
 
-				var nextNumber uint32 // If this is zero, then we'll ask for the latest value.
+				nextNumbers := make([]uint32, len(clients)) // If this is zero, then we'll ask for the latest value.
 				for batch := 0; ; batch++ {
 					if batchCount > 0 {
 						if batch >= batchCount {
@@ -147,56 +170,61 @@ func main() {
 						time.Sleep(sleepDuration)
 					}
 
-					logrus.Debugf("Next number: %d", nextNumber)
-					request := wire.GetOperationStatusRequest{
-						RecordIndex: nextNumber,
-					}
-					var response wire.GetOperationStatusResponse
-					err := client.Raw(wire.FunctionGetOperationStatus, &request, &response)
-					if err != nil {
-						logrus.Errorf("Error: %v", err)
-						os.Exit(1)
-					}
-					logrus.Debugf("Response: %+v", response)
-					if response.RecordCount >= nextNumber {
-						if nextNumber > 0 && response.RecordCount >= nextNumber {
-							for index := nextNumber; index <= response.RecordCount; index++ {
-								logrus.Debugf("Geting record %d", index)
-								request := wire.GetOperationStatusRequest{
-									RecordIndex: index,
-								}
-								var response wire.GetOperationStatusResponse
-								err := client.Raw(wire.FunctionGetOperationStatus, &request, &response)
-								if err != nil {
-									logrus.Errorf("Error: %v", err)
-									os.Exit(1)
-								}
-								logrus.Debugf("Response: %+v", response)
-								if response.Record != nil {
-									logrus.Debugf("Record: %+v", *response.Record)
-									var person *cobrafile.Person
-									var controller, door string
-									if controllerList != nil {
-										controller, door = controllerList.LookupNameAndDoor(client.ControllerAddress, response.Record.RecordState)
+					for clientIndex, client := range clients {
+						nextNumber := nextNumbers[clientIndex]
+
+						logrus.Debugf("Next number: %d", nextNumber)
+						request := wire.GetOperationStatusRequest{
+							RecordIndex: nextNumber,
+						}
+						var response wire.GetOperationStatusResponse
+						err := client.Raw(wire.FunctionGetOperationStatus, &request, &response)
+						if err != nil {
+							logrus.Errorf("Error: %v", err)
+							os.Exit(1)
+						}
+						logrus.Debugf("Response: %+v", response)
+						if response.RecordCount >= nextNumber {
+							if nextNumber > 0 && response.RecordCount >= nextNumber {
+								for index := nextNumber; index <= response.RecordCount; index++ {
+									logrus.Debugf("Geting record %d", index)
+									request := wire.GetOperationStatusRequest{
+										RecordIndex: index,
 									}
-									if personnelList != nil {
-										person = personnelList.FindByCardID(wire.CardID(response.Record.AreaNumber, response.Record.IDNumber))
+									var response wire.GetOperationStatusResponse
+									err := client.Raw(wire.FunctionGetOperationStatus, &request, &response)
+									if err != nil {
+										logrus.Errorf("Error: %v", err)
+										os.Exit(1)
 									}
-									if controller == "" {
-										controller = client.ControllerAddress
-									}
-									if door == "" {
-										door = fmt.Sprintf("%d", response.Record.RecordState)
-									}
-									if person == nil {
-										fmt.Printf("%v | Controller: %s | Door: %s | Card ID: %s\n", response.Record.BrushDateTime, controller, door, wire.CardID(response.Record.AreaNumber, response.Record.IDNumber))
-									} else {
-										fmt.Printf("%v | Controller: %s | Door: %s | Card ID: %s | Name: %s\n", response.Record.BrushDateTime, controller, door, wire.CardID(response.Record.AreaNumber, response.Record.IDNumber), person.Name)
+									logrus.Debugf("Response: %+v", response)
+									if response.Record != nil {
+										logrus.Debugf("Record: %+v", *response.Record)
+										var person *cobrafile.Person
+										var controller, door string
+										if controllerList != nil {
+											controller, door = controllerList.LookupNameAndDoor(client.ControllerAddress, response.Record.RecordState)
+										}
+										if personnelList != nil {
+											person = personnelList.FindByCardID(wire.CardID(response.Record.AreaNumber, response.Record.IDNumber))
+										}
+										if controller == "" {
+											controller = client.ControllerAddress
+										}
+										if door == "" {
+											door = fmt.Sprintf("%d", response.Record.RecordState)
+										}
+										if person == nil {
+											fmt.Printf("%v | Controller: %s | Door: %s | Card ID: %s\n", response.Record.BrushDateTime, controller, door, wire.CardID(response.Record.AreaNumber, response.Record.IDNumber))
+										} else {
+											fmt.Printf("%v | Controller: %s | Door: %s | Card ID: %s | Name: %s\n", response.Record.BrushDateTime, controller, door, wire.CardID(response.Record.AreaNumber, response.Record.IDNumber), person.Name)
+										}
 									}
 								}
 							}
+							nextNumber = response.RecordCount + 1
+							nextNumbers[clientIndex] = nextNumber
 						}
-						nextNumber = response.RecordCount + 1
 					}
 				}
 			},
