@@ -78,3 +78,35 @@ func LoadController(filename string) (ControllerList, error) {
 	}
 	return result, nil
 }
+
+func (l ControllerList) LookupName(address string) string {
+	for _, controller := range l {
+		if controller.Address == address {
+			return controller.Name
+		}
+	}
+	return ""
+}
+
+func (l ControllerList) LookupDoor(address string, door uint8) string {
+	for _, controller := range l {
+		if controller.Address == address {
+			if door > 0 && int(door) <= len(controller.Doors) {
+				return controller.Doors[door-1]
+			}
+		}
+	}
+	return ""
+}
+
+func (l ControllerList) LookupNameAndDoor(address string, door uint8) (string, string) {
+	for _, controller := range l {
+		if controller.Address == address {
+			if door > 0 && int(door) <= len(controller.Doors) {
+				return controller.Name, controller.Doors[door-1]
+			}
+			return controller.Name, ""
+		}
+	}
+	return "", ""
+}
