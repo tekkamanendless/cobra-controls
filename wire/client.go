@@ -77,6 +77,8 @@ func (c *Client) Raw(f uint16, e Encoder, d Decoder) error {
 		contents := make([]byte, 1024)
 		bytesRead, err := c.conn.Read(contents)
 		if err != nil {
+			c.conn.Close()
+			c.conn = nil
 			return fmt.Errorf("could not read contents: %v", err)
 		}
 		contents = contents[0:bytesRead]
@@ -85,7 +87,7 @@ func (c *Client) Raw(f uint16, e Encoder, d Decoder) error {
 		var envelope Envelope
 		err = Decode(contents, &envelope)
 		if err != nil {
-			return fmt.Errorf("could not read contents: %v", err)
+			return fmt.Errorf("could not decode envelope: %v", err)
 		}
 		logrus.Debugf("Response: %x", envelope.Contents)
 

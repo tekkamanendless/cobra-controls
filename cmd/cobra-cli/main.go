@@ -121,7 +121,7 @@ func main() {
 						err := client.Raw(wire.FunctionGetBasicInfo, nil, &response)
 						if err != nil {
 							logrus.Errorf("Error: %v", err)
-							os.Exit(1)
+							continue
 						}
 						logrus.Infof("Response: %+v", response)
 					}
@@ -133,7 +133,7 @@ func main() {
 						err := client.Raw(wire.FunctionGetNetworkInfo, request, &response)
 						if err != nil {
 							logrus.Errorf("Error: %v", err)
-							os.Exit(1)
+							continue
 						}
 						logrus.Infof("Response: %+v", response)
 					}
@@ -180,8 +180,8 @@ func main() {
 						var response wire.GetOperationStatusResponse
 						err := client.Raw(wire.FunctionGetOperationStatus, &request, &response)
 						if err != nil {
-							logrus.Errorf("Error: %v", err)
-							os.Exit(1)
+							logrus.Errorf("Error from client: %v", err)
+							continue
 						}
 						logrus.Debugf("Response: %+v", response)
 						if response.RecordCount >= nextNumber {
@@ -194,8 +194,8 @@ func main() {
 									var response wire.GetOperationStatusResponse
 									err := client.Raw(wire.FunctionGetOperationStatus, &request, &response)
 									if err != nil {
-										logrus.Errorf("Error: %v", err)
-										os.Exit(1)
+										logrus.Errorf("Error from client: %v", err)
+										continue
 									}
 									logrus.Debugf("Response: %+v", response)
 									if response.Record != nil {
