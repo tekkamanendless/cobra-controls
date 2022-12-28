@@ -172,10 +172,9 @@ func parseData(fullContents []byte, fromClient bool) error {
 				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
 			}
 
-			cardID := fmt.Sprintf("%d%05d", userNumber, cardNumber)
 			logrus.Infof("   Card number: %d", cardNumber)
 			logrus.Infof("   User number: %d", userNumber)
-			logrus.Infof("   Card ID: %s", cardID)
+			logrus.Infof("   Card ID: %s", wire.CardID(userNumber, cardNumber))
 			logrus.Infof("   Brush card state: %d", brushCardState)
 			logrus.Infof("   Brush date: %v", brushCardDate)
 			logrus.Infof("   Brush time: %v", brushCardTime)
@@ -342,7 +341,6 @@ func parseData(fullContents []byte, fromClient bool) error {
 			if err != nil {
 				return fmt.Errorf("could not read user number: %w", err)
 			}
-			cardID := fmt.Sprintf("%d%05d", userNumber, id)
 			doorNumber, err := data.ReadUint8()
 			if err != nil {
 				return fmt.Errorf("could not read door number: %w", err)
@@ -374,7 +372,7 @@ func parseData(fullContents []byte, fromClient bool) error {
 			logrus.Infof("Popedom index: %d", popedomIndex)
 			logrus.Infof("ID: %d", id)
 			logrus.Infof("User number: %d", userNumber)
-			logrus.Infof("Card ID: %s", cardID)
+			logrus.Infof("Card ID: %s", wire.CardID(userNumber, id))
 			logrus.Infof("Door number: %d", doorNumber)
 			logrus.Infof("Start date: %v", startDate)
 			logrus.Infof("End date: %v", endDate)
@@ -518,7 +516,6 @@ func parseData(fullContents []byte, fromClient bool) error {
 				if err != nil {
 					return fmt.Errorf("could not read area: %w", err)
 				}
-				cardID := fmt.Sprintf("%d%05d", area, id)
 				door, err := popedom.ReadUint8()
 				if err != nil {
 					return fmt.Errorf("could not read door: %w", err)
@@ -560,7 +557,7 @@ func parseData(fullContents []byte, fromClient bool) error {
 				}
 				logrus.Infof("ID: %d", id)
 				logrus.Infof("Area: %d", area)
-				logrus.Infof("Card ID: %s", cardID)
+				logrus.Infof("Card ID: %s", wire.CardID(area, id))
 				logrus.Infof("Door: %d", door)
 				logrus.Infof("Open Date: %v", openDate)
 				logrus.Infof("Close Date: %v", closeDate)

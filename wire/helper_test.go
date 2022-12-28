@@ -7,6 +7,47 @@ import (
 	"gotest.tools/assert"
 )
 
+func TestCardID(t *testing.T) {
+	rows := []struct {
+		prefix uint8
+		suffix uint16
+		output string
+	}{
+		{
+			prefix: 0,
+			suffix: 0,
+			output: "000000",
+		},
+		{
+			prefix: 1,
+			suffix: 1,
+			output: "100001",
+		},
+		{
+			prefix: 2,
+			suffix: 2,
+			output: "200002",
+		},
+		{
+			prefix: 250,
+			suffix: 10,
+			output: "25000010",
+		},
+		{
+			prefix: 250,
+			suffix: 65000,
+			output: "25065000",
+		},
+	}
+	for rowIndex, row := range rows {
+		t.Run(fmt.Sprintf("%d/%s", rowIndex, row.output), func(t *testing.T) {
+			output := CardID(row.prefix, row.suffix)
+			assert.Equal(t, row.output, output)
+		})
+	}
+
+}
+
 func TestInsaneBase16ToBase10(t *testing.T) {
 	rows := []struct {
 		input  uint8

@@ -1,8 +1,15 @@
 package wire
 
 import (
+	"fmt"
 	"time"
 )
+
+// CardID returns the human-readable card ID based on the 8-bit prefix and the
+// 16-bit suffix.
+func CardID(prefix uint8, suffix uint16) string {
+	return fmt.Sprintf("%d%05d", prefix, suffix)
+}
 
 // IsAll returns true if all bytes in the slice are the specified value.
 //
