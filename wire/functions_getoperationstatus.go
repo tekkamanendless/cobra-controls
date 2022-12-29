@@ -3,8 +3,6 @@ package wire
 import (
 	"fmt"
 	"time"
-
-	"github.com/sirupsen/logrus"
 )
 
 type GetOperationStatusRequest struct {
@@ -71,8 +69,8 @@ func (r *Record) Decode(b []byte) error {
 		return fmt.Errorf("could not read brush time: %v", err)
 	}
 	r.BrushDateTime = MergeDateTime(brushDate, brushTime)
-	if reader.Length() > 0 {
-		return fmt.Errorf("unexpected contents: %x", reader.Bytes())
+	if !IsAll(reader.Bytes(), 0) {
+		return fmt.Errorf("unexpected contents: %x", b)
 	}
 	return nil
 }
@@ -99,7 +97,7 @@ func (r *GetOperationStatusResponse) Encode() ([]byte, error) {
 	writer.WriteUint8(InsaneBase10ToBase16(uint8(year)))
 	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Month())))
 	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Day())))
-	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Weekday()))) // This appears to be the day of the week.
+	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Weekday())))
 	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Hour())))
 	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Minute())))
 	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Second())))
@@ -212,9 +210,8 @@ func (r *GetOperationStatusResponse) Decode(b []byte) error {
 	if err != nil {
 		return fmt.Errorf("could not read reserved 4: %w", err)
 	}
-	// All remaining bytes are reserved.
-	if reader.Length() != 0 {
-		logrus.Warnf("Unexpected remaining data: %x", reader)
+	if !IsAll(reader.Bytes(), 0) {
+		return fmt.Errorf("unexpected contents: %x", b)
 	}
 
 	return nil

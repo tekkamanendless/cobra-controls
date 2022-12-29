@@ -172,9 +172,24 @@ func parseData(fullContents []byte, fromClient bool, personnelList cobrafile.Per
 			}
 			logrus.Infof("Response: %+v", response)
 		}
-	case 0x108B:
-		logrus.Infof("Function: Set the time")
-		logrus.Warnf("TODO NOT IMPLEMENTED")
+	case wire.FunctionSetTime:
+		logrus.Infof("Function: SetTime")
+		if fromClient {
+			var request wire.SetTimeRequest
+			err = wire.Decode(data.Bytes(), &request)
+			if err != nil {
+				return err
+			}
+			logrus.Infof("Request: %+v", request)
+		} else {
+			var response wire.SetTimeResponse
+			err = wire.Decode(data.Bytes(), &response)
+			if err != nil {
+				return err
+			}
+			logrus.Infof("Response: %+v", response)
+		}
+
 	case 0x108D:
 		logrus.Infof("Function: Read the records information (by index)")
 		if fromClient {

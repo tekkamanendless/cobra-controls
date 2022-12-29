@@ -106,6 +106,55 @@ func main() {
 
 	{
 		cmd := &cobra.Command{
+			Use:   "drift",
+			Short: "Show the time drift",
+			Long:  ``,
+			Run: func(cmd *cobra.Command, args []string) {
+				if len(clients) == 0 {
+					logrus.Errorf("Invalid client")
+					os.Exit(1)
+				}
+
+				for _, client := range clients {
+					var controller string
+					if controllerList != nil {
+						controller = controllerList.LookupName(client.ControllerAddress)
+					}
+					if controller == "" {
+						controller = client.ControllerAddress
+					}
+
+					var sum time.Duration
+					count := 0
+					for i := 0; i < 10; i++ {
+						currentTime := time.Now()
+
+						request := wire.GetOperationStatusRequest{
+							RecordIndex: 0,
+						}
+						var response wire.GetOperationStatusResponse
+						err := client.Raw(wire.FunctionGetOperationStatus, &request, &response)
+						if err != nil {
+							logrus.Errorf("Error from client: %v", err)
+							continue
+						}
+
+						logrus.Debugf("Current time: %v", currentTime)
+						logrus.Debugf("System time: %v", response.CurrentTime)
+						timeAhead := response.CurrentTime.Sub(currentTime)
+						sum += timeAhead
+					}
+					drift := sum / time.Duration(count)
+					fmt.Printf("Controller: %s | Drift: %v (+ is ahead, - is behind)", controller, drift)
+				}
+			},
+		}
+
+		rootCommand.AddCommand(cmd)
+	}
+
+	{
+		cmd := &cobra.Command{
 			Use:   "info",
 			Short: "Gather information",
 			Long:  ``,
