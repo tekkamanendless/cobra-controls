@@ -143,9 +143,14 @@ func main() {
 						logrus.Debugf("System time: %v", response.CurrentTime)
 						timeAhead := response.CurrentTime.Sub(currentTime)
 						sum += timeAhead
+						count++
 					}
 					drift := sum / time.Duration(count)
-					fmt.Printf("Controller: %s | Drift: %v (+ is ahead, - is behind)", controller, drift)
+					if count == 0 {
+						fmt.Printf("Controller: %s | Drift: unknown", controller)
+					} else {
+						fmt.Printf("Controller: %s | Drift: %v (+ is ahead, - is behind)", controller, drift)
+					}
 				}
 			},
 		}
