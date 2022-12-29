@@ -109,6 +109,7 @@ func main() {
 			Use:   "drift",
 			Short: "Show the time drift",
 			Long:  ``,
+			Args:  cobra.NoArgs,
 			Run: func(cmd *cobra.Command, args []string) {
 				if len(clients) == 0 {
 					logrus.Errorf("Invalid client")
@@ -164,6 +165,7 @@ func main() {
 			Use:   "info",
 			Short: "Gather information",
 			Long:  ``,
+			Args:  cobra.NoArgs,
 			Run: func(cmd *cobra.Command, args []string) {
 				if len(clients) == 0 {
 					logrus.Errorf("Invalid client")
@@ -207,6 +209,7 @@ func main() {
 			Use:   "monitor",
 			Short: "Monitor a door",
 			Long:  ``,
+			Args:  cobra.NoArgs,
 			Run: func(cmd *cobra.Command, args []string) {
 				if len(clients) == 0 {
 					logrus.Errorf("Invalid client")
@@ -286,6 +289,49 @@ func main() {
 		}
 		cmd.Flags().IntVar(&batchCount, "batch", 10, "How many iterations to run (use 0 for infinite)")
 		cmd.Flags().DurationVar(&sleepDuration, "batch-interval", 5*time.Second, "How long to wait between batches")
+
+		rootCommand.AddCommand(cmd)
+	}
+
+	{
+		cmd := &cobra.Command{
+			Use:   "set-time",
+			Short: "Set the time",
+			Long:  ``,
+			Args:  cobra.NoArgs,
+			Run: func(cmd *cobra.Command, args []string) {
+				if len(clients) == 0 {
+					logrus.Errorf("Invalid client")
+					os.Exit(1)
+				}
+
+				for _, client := range clients {
+					var controller string
+					if controllerList != nil {
+						controller = controllerList.LookupName(client.ControllerAddress)
+					}
+					if controller == "" {
+						controller = client.ControllerAddress
+					}
+
+					currentTime := time.Now()
+					currentTime = time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(), currentTime.Hour(), currentTime.Minute(), currentTime.Second(), 0, time.UTC)
+
+					request := wire.SetTimeRequest{
+						CurrentTime: currentTime,
+					}
+					var response wire.SetTimeResponse
+					err := client.Raw(wire.FunctionSetTime, &request, &response)
+					if err != nil {
+						logrus.Errorf("Error: %v", err)
+						continue
+					}
+					logrus.Debugf("Response: %+v", response)
+
+					fmt.Printf("Controller: %s | Current time: %v | System time: %s\n", controller, currentTime, response.CurrentTime)
+				}
+			},
+		}
 
 		rootCommand.AddCommand(cmd)
 	}
