@@ -128,6 +128,7 @@ func main() {
 					count := 0
 					for i := 0; i < 10; i++ {
 						currentTime := time.Now()
+						currentTime = time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day(), currentTime.Hour(), currentTime.Minute(), currentTime.Second(), 0, time.UTC)
 
 						request := wire.GetOperationStatusRequest{
 							RecordIndex: 0,
@@ -147,9 +148,9 @@ func main() {
 					}
 					drift := sum / time.Duration(count)
 					if count == 0 {
-						fmt.Printf("Controller: %s | Drift: unknown", controller)
+						fmt.Printf("Controller: %s | Drift: unknown\n", controller)
 					} else {
-						fmt.Printf("Controller: %s | Drift: %v (+ is ahead, - is behind)", controller, drift)
+						fmt.Printf("Controller: %s | Drift: %v (+ is ahead, - is behind)\n", controller, drift)
 					}
 				}
 			},
