@@ -63,6 +63,8 @@ func (c *Client) Raw(f uint16, e Encoder, d Decoder) error {
 		}
 		bytesWritten, err := c.conn.Write(messageBytes)
 		if err != nil {
+			c.conn.Close()
+			c.conn = nil
 			return fmt.Errorf("could not write message: %v", err)
 		}
 		logrus.Debugf("Bytes written: %d", bytesWritten)
