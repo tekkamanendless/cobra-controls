@@ -197,6 +197,7 @@ func main() {
 							logrus.Errorf("Error from client: %v", err)
 							continue
 						}
+						logrus.Debugf("Response: %+v", response)
 						if response.Record != nil {
 							logrus.Debugf("Record: %+v", *response.Record)
 							var person *cobrafile.Person
@@ -214,9 +215,9 @@ func main() {
 								door = fmt.Sprintf("%d", response.Record.RecordState)
 							}
 							if person == nil {
-								fmt.Printf("%v | Controller: %s | Door: %s | Card ID: %s\n", response.Record.BrushDateTime, controller, door, wire.CardID(response.Record.AreaNumber, response.Record.IDNumber))
+								fmt.Printf("%v | Controller: %s | Index: %d | Door: %s | Card ID: %s\n", response.Record.BrushDateTime, controller, request.RecordIndex, door, wire.CardID(response.Record.AreaNumber, response.Record.IDNumber))
 							} else {
-								fmt.Printf("%v | Controller: %s | Door: %s | Card ID: %s | Name: %s\n", response.Record.BrushDateTime, controller, door, wire.CardID(response.Record.AreaNumber, response.Record.IDNumber), person.Name)
+								fmt.Printf("%v | Controller: %s | Index: %d | Door: %s | Card ID: %s | Name: %s\n", response.Record.BrushDateTime, controller, request.RecordIndex, door, wire.CardID(response.Record.AreaNumber, response.Record.IDNumber), person.Name)
 							}
 						}
 					}

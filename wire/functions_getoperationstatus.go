@@ -28,6 +28,41 @@ func (r *GetOperationStatusRequest) Decode(b []byte) error {
 	return nil
 }
 
+// TODO: RecordState
+//
+// When the "area number" is over 100...
+// Relay state bits:
+// 876543 21
+// State  Door
+// (xx represents the door, 0-3.)
+// 100000 xx Denied, "non-specific"
+// 100100 xx Denied, "do not have permission"
+// 101000 xx Denied, "password incorrect"
+// 101100 xx Denied, "system at fault"
+// 110000 xx Denied, "anti-submarine back, many cards to open the door or door interlocking"
+// 110001 xx Denied, "anti-submarine back"
+// 110010 xx Denied, "many cards"
+// 110011 xx Denied, "the first card"
+// 110100 xx Denied, "the door is normal closed"
+// 110101 xx Denied, "door interlocking"
+// 111000 xx Denied, "card expired or not valid time"
+//
+// When the "area number" is under 100 (it's a special recorc)...
+// Area bits | Relay state bits:
+// 43   21     876543 21
+// (xx represents the door, 0-3.)
+// Area   Relay state
+// 00 xx  000000 00 "button"
+// 00 xx  000000 11 "long-distance open"
+// 01 01  000000 xx "super password open"
+// 10 xx  000000 00 "door opening, magnetism signal"
+// 11 xx  000000 00 "door closed, magnetism signal"
+// 00 xx  100000 01 "duress alarm"
+// 00 xx  100000 10 "long time not close alarm"
+// 00 xx  100001 00 "illegal intrusion alarm"
+// 01 00  101000 00 "fire alarm action (whole controller)"
+// 01 10  101000 00 "compulsion lock door (whole controller)"
+
 type Record struct {
 	IDNumber      uint16    // "${AreaNumber}${IDNumber}" is the fob ID in the UI.
 	AreaNumber    uint8     // "${AreaNumber}${IDNumber}" is the fob ID in the UI.
