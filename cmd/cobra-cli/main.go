@@ -162,6 +162,73 @@ func main() {
 
 	{
 		cmd := &cobra.Command{
+			Use:   "history",
+			Short: "Query the history",
+			Long:  ``,
+			Args:  cobra.MinimumNArgs(0),
+			Run: func(cmd *cobra.Command, args []string) {
+				if len(clients) == 0 {
+					logrus.Errorf("Invalid client")
+					os.Exit(1)
+				}
+
+				var nextNumbers []uint32
+				for _, arg := range args {
+					v, err := strconv.ParseInt(arg, 0, 33)
+					if err != nil {
+						logrus.Errorf("Could not parse value %q: %v", arg, err)
+						os.Exit(1)
+					}
+					nextNumbers = append(nextNumbers, uint32(v))
+				}
+				if len(nextNumbers) == 0 {
+					nextNumbers = append(nextNumbers, 0)
+				}
+
+				for _, client := range clients {
+					for _, nextNumber := range nextNumbers {
+						logrus.Debugf("Next number: %d", nextNumber)
+						request := wire.GetOperationStatusRequest{
+							RecordIndex: nextNumber,
+						}
+						var response wire.GetOperationStatusResponse
+						err := client.Raw(wire.FunctionGetOperationStatus, &request, &response)
+						if err != nil {
+							logrus.Errorf("Error from client: %v", err)
+							continue
+						}
+						if response.Record != nil {
+							logrus.Debugf("Record: %+v", *response.Record)
+							var person *cobrafile.Person
+							var controller, door string
+							if controllerList != nil {
+								controller, door = controllerList.LookupNameAndDoor(client.ControllerAddress, response.Record.RecordState)
+							}
+							if personnelList != nil {
+								person = personnelList.FindByCardID(wire.CardID(response.Record.AreaNumber, response.Record.IDNumber))
+							}
+							if controller == "" {
+								controller = client.ControllerAddress
+							}
+							if door == "" {
+								door = fmt.Sprintf("%d", response.Record.RecordState)
+							}
+							if person == nil {
+								fmt.Printf("%v | Controller: %s | Door: %s | Card ID: %s\n", response.Record.BrushDateTime, controller, door, wire.CardID(response.Record.AreaNumber, response.Record.IDNumber))
+							} else {
+								fmt.Printf("%v | Controller: %s | Door: %s | Card ID: %s | Name: %s\n", response.Record.BrushDateTime, controller, door, wire.CardID(response.Record.AreaNumber, response.Record.IDNumber), person.Name)
+							}
+						}
+					}
+				}
+			},
+		}
+
+		rootCommand.AddCommand(cmd)
+	}
+
+	{
+		cmd := &cobra.Command{
 			Use:   "info",
 			Short: "Gather information",
 			Long:  ``,
