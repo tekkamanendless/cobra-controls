@@ -30,7 +30,13 @@ func (r *GetOperationStatusRequest) Decode(b []byte) error {
 
 // TODO: RecordState
 //
-// When the "area number" is over 100...
+// Card ID seems to refer to "${AreaNumber}${IDNumber}".
+// It doesn't make any sense why you'd compare this to 100; at first I thought
+// that it only referred to the area number, but I checked a bunch of our IDs,
+// and there are some with a low area number.  I suspect that this only means
+// that (1) area number is zero and (2) ID number is less than 100.
+//
+// When the card ID is over 100...
 // Relay state bits:
 // 876543 21
 // State  Door
@@ -47,11 +53,11 @@ func (r *GetOperationStatusRequest) Decode(b []byte) error {
 // 110101 xx Denied, "door interlocking"
 // 111000 xx Denied, "card expired or not valid time"
 //
-// When the "area number" is under 100 (it's a special recorc)...
-// Area bits | Relay state bits:
+// When the card ID is under 100 (it's a special record)...
+// Card bits | Relay state bits:
 // 43   21     876543 21
 // (xx represents the door, 0-3.)
-// Area   Relay state
+// Card   Relay state
 // 00 xx  000000 00 "button"
 // 00 xx  000000 11 "long-distance open"
 // 01 01  000000 xx "super password open"
@@ -66,8 +72,16 @@ func (r *GetOperationStatusRequest) Decode(b []byte) error {
 type Record struct {
 	IDNumber      uint16    // "${AreaNumber}${IDNumber}" is the fob ID in the UI.
 	AreaNumber    uint8     // "${AreaNumber}${IDNumber}" is the fob ID in the UI.
-	RecordState   uint8     // TODO: This appears to be the door.
+	RecordState   uint8     // This is the state that has been recorded (access granted/denied, which door, etc.).
 	BrushDateTime time.Time // This is the time of the access.
+}
+
+func (r *Record) Door() uint8 {
+	return r.RecordState & 0b11
+}
+
+func (r *Record) AccessGranted() bool {
+	return (r.RecordState&0b10000000 == 0)
 }
 
 func (r *Record) Encode() ([]byte, error) {

@@ -153,6 +153,11 @@ func parseData(fullContents []byte, fromClient bool, personnelList cobrafile.Per
 			logrus.Infof("Response: %+v", response)
 			if response.Record != nil {
 				logrus.Infof("Record: %+v", *response.Record)
+				if personnelList != nil {
+					if person := personnelList.FindByCardID(wire.CardID(response.Record.AreaNumber, response.Record.IDNumber)); person != nil {
+						logrus.Infof("   Person: %+v", *person)
+					}
+				}
 			}
 		}
 	case wire.FunctionGetBasicInfo:
@@ -674,9 +679,29 @@ func parseData(fullContents []byte, fromClient bool, personnelList cobrafile.Per
 			}
 			logrus.Infof("Response: %+v", response)
 		}
-	case 0x1107:
+	case wire.FunctionUpdatePermissions:
 		logrus.Infof("Function: Add or modify permissions")
-		logrus.Warnf("TODO NOT IMPLEMENTED")
+		if fromClient {
+			var request wire.UpdatePermissionsRequest
+			err = wire.Decode(data.Bytes(), &request)
+			if err != nil {
+				return err
+			}
+			logrus.Infof("Request: %+v", request)
+			logrus.Infof("Card ID: %s", wire.CardID(request.Area, request.CardID))
+			if personnelList != nil {
+				if person := personnelList.FindByCardID(wire.CardID(request.Area, request.CardID)); person != nil {
+					logrus.Infof("   Person: %+v", *person)
+				}
+			}
+		} else {
+			var response wire.UpdatePermissionsResponse
+			err = wire.Decode(data.Bytes(), &response)
+			if err != nil {
+				return err
+			}
+			logrus.Infof("Response: %+v", response)
+		}
 	case 0x1108:
 		logrus.Infof("Function: Delete an authority")
 		logrus.Warnf("TODO NOT IMPLEMENTED")

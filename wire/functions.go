@@ -6,4 +6,5 @@ const (
 	FunctionSetTime            = 0x108b
 	FunctionOpenDoor           = 0x109d
 	FunctionGetNetworkInfo     = 0x1101
+	FunctionUpdatePermissions  = 0x1107
 )
