@@ -91,7 +91,7 @@ func main() {
 								fromClient = true
 								controllerAddress = packet.NetworkLayer().NetworkFlow().Dst().String()
 							} else {
-								controllerAddress = packet.NetworkLayer().NetworkFlow().Dst().String()
+								controllerAddress = packet.NetworkLayer().NetworkFlow().Src().String()
 							}
 						}
 					}
@@ -132,6 +132,11 @@ func parseData(fullContents []byte, fromClient bool, controllerAddress string, c
 	}
 
 	logrus.Infof("Packet:")
+	var controllerName string
+	if controllerList != nil {
+		controllerName = controllerList.LookupName(controllerAddress)
+	}
+	logrus.Infof("Controller: %s (name: %s)", controllerAddress, controllerName)
 	logrus.Infof("Board address: 0x%X", envelope.BoardAddress)
 	logrus.Infof("Function type: 0x%X", envelope.Function)
 	logrus.Infof("Remaining data: (%d) %X", len(envelope.Contents), envelope.Contents)
@@ -160,6 +165,22 @@ func parseData(fullContents []byte, fromClient bool, controllerAddress string, c
 				if personnelList != nil {
 					if person := personnelList.FindByCardID(wire.CardID(response.Record.AreaNumber, response.Record.IDNumber)); person != nil {
 						logrus.Infof("   Person: %+v", *person)
+					}
+				}
+				if response.Record.AreaNumber == 0 && response.Record.IDNumber < 100 {
+					if response.Record.RecordState == 0b00 && response.Record.IDNumber <= 3 {
+						logrus.Infof("   Action: Button")
+					} else if response.Record.RecordState == 0b11 && response.Record.IDNumber <= 3 {
+						logrus.Infof("   Action: Remote control")
+					} else {
+						logrus.Warnf("   Action: TODO UNHANDLED")
+					}
+				}
+				logrus.Infof("   Door: %d (access: %t)", response.Record.Door(), response.Record.AccessGranted())
+				if controllerList != nil {
+					door := controllerList.LookupDoor(controllerAddress, response.Record.Door())
+					if door != "" {
+						logrus.Infof("   Door name: %s", door)
 					}
 				}
 			}

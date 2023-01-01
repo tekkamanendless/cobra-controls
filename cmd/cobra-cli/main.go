@@ -378,14 +378,14 @@ func main() {
 						logrus.Infof("Door string: %s", arg)
 						var door uint8
 						switch arg {
-						case "0":
-							door = 0
 						case "1":
 							door = 1
 						case "2":
 							door = 2
 						case "3":
 							door = 3
+						case "4":
+							door = 4
 						default:
 							if controllerList != nil {
 								var ok bool

@@ -54,12 +54,13 @@ func (r *GetOperationStatusRequest) Decode(b []byte) error {
 // 111000 xx Denied, "card expired or not valid time"
 //
 // When the card ID is under 100 (it's a special record)...
+// Empirically, it would seem that the "area number" is 0 in this case.
 // Card bits | Relay state bits:
 // 43   21     876543 21
 // (xx represents the door, 0-3.)
 // Card   Relay state
 // 00 xx  000000 00 "button"
-// 00 xx  000000 11 "long-distance open"
+// 00 xx  000000 11 "long-distance open" (for example, area=0, card-id=2, record-state=3 means that door 3 was opened by remote control)
 // 01 01  000000 xx "super password open"
 // 10 xx  000000 00 "door opening, magnetism signal"
 // 11 xx  000000 00 "door closed, magnetism signal"
@@ -76,8 +77,30 @@ type Record struct {
 	BrushDateTime time.Time // This is the time of the access.
 }
 
+// Door returns the door with a one index (1-4).
+// A value of 0 means invalid door.
 func (r *Record) Door() uint8 {
-	return r.RecordState & 0b11
+	if r.AreaNumber == 0 && r.IDNumber < 100 {
+		if r.IDNumber&0b1100 == 0b0000 {
+			return (uint8(r.IDNumber) & 0b11) + 1
+		}
+		if r.IDNumber&0b1100 == 0b1000 {
+			return (uint8(r.IDNumber) & 0b11) + 1
+		}
+		if r.IDNumber&0b1100 == 0b1100 {
+			return (uint8(r.IDNumber) & 0b11) + 1
+		}
+		if r.IDNumber == 0b0101 {
+			return (r.RecordState & 0b11) + 1
+		}
+		if r.IDNumber == 0b0100 {
+			return 0 // No specific door.
+		}
+		if r.IDNumber == 0b0110 {
+			return 0 // No specific door.
+		}
+	}
+	return (r.RecordState & 0b11) + 1
 }
 
 func (r *Record) AccessGranted() bool {
