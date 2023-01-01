@@ -162,9 +162,9 @@ func main() {
 
 	{
 		cmd := &cobra.Command{
-			Use:   "history",
+			Use:   "history [<index|range>[ ...]]",
 			Short: "Query the history",
-			Long:  ``,
+			Long:  `You may specify either a specific index, such as "1234", or a range of the form "last #", such as "last 50".  If nothing is specified, then the most recent record is shown.`,
 			Args:  cobra.MinimumNArgs(0),
 			Run: func(cmd *cobra.Command, args []string) {
 				if len(clients) == 0 {
@@ -172,20 +172,59 @@ func main() {
 					os.Exit(1)
 				}
 
-				var nextNumbers []uint32
-				for _, arg := range args {
-					v, err := strconv.ParseInt(arg, 0, 33)
-					if err != nil {
-						logrus.Errorf("Could not parse value %q: %v", arg, err)
-						os.Exit(1)
+				nextNumbersByClient := make([][]uint32, len(clients))
+				for i := 0; i < len(args); i++ {
+					arg := args[i]
+					switch arg {
+					case "last":
+						i++
+						if i >= len(args) {
+							logrus.Errorf("Expected number after 'last'.")
+							os.Exit(1)
+						}
+						arg = args[i]
+						v, err := strconv.ParseInt(arg, 0, 33)
+						if err != nil {
+							logrus.Errorf("Could not parse value %q: %v", arg, err)
+							os.Exit(1)
+						}
+						for c, client := range clients {
+							request := wire.GetOperationStatusRequest{
+								RecordIndex: 0,
+							}
+							var response wire.GetOperationStatusResponse
+							err := client.Raw(wire.FunctionGetOperationStatus, &request, &response)
+							if err != nil {
+								logrus.Errorf("Error from client: %v", err)
+								continue
+							}
+							logrus.Debugf("Response: %+v", response)
+
+							startIndex := uint32(1)
+							if response.RecordCount > uint32(v) {
+								startIndex = response.RecordCount - uint32(v)
+							}
+							for i := startIndex; i <= response.RecordCount; i++ {
+								nextNumbersByClient[c] = append(nextNumbersByClient[c], i)
+							}
+						}
+					default:
+						v, err := strconv.ParseInt(arg, 0, 33)
+						if err != nil {
+							logrus.Errorf("Could not parse value %q: %v", arg, err)
+							os.Exit(1)
+						}
+						for c := range clients {
+							nextNumbersByClient[c] = []uint32{uint32(v)}
+						}
 					}
-					nextNumbers = append(nextNumbers, uint32(v))
-				}
-				if len(nextNumbers) == 0 {
-					nextNumbers = append(nextNumbers, 0)
 				}
 
-				for _, client := range clients {
+				for c, client := range clients {
+					nextNumbers := nextNumbersByClient[c]
+					if len(nextNumbers) == 0 {
+						nextNumbers = append(nextNumbers, 0)
+					}
 					for _, nextNumber := range nextNumbers {
 						logrus.Debugf("Next number: %d", nextNumber)
 						request := wire.GetOperationStatusRequest{
