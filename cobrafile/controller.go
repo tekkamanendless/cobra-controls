@@ -92,6 +92,19 @@ func (l ControllerList) LookupName(address string) string {
 	return ""
 }
 
+func (l ControllerList) FindDoor(address string, door string) (uint8, bool) {
+	for _, controller := range l {
+		if controller.Address == address {
+			for d := range controller.Doors {
+				if strings.ToLower(controller.Doors[d]) == strings.ToLower(door) {
+					return uint8(d), true
+				}
+			}
+		}
+	}
+	return 0, false
+}
+
 func (l ControllerList) LookupDoor(address string, door uint8) string {
 	for _, controller := range l {
 		if controller.Address == address {

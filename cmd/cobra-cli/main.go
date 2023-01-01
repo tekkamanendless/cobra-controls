@@ -363,6 +363,61 @@ func main() {
 
 	{
 		cmd := &cobra.Command{
+			Use:   "open-door",
+			Short: "Open a door",
+			Long:  ``,
+			Args:  cobra.NoArgs,
+			Run: func(cmd *cobra.Command, args []string) {
+				if len(clients) == 0 {
+					logrus.Errorf("Invalid client")
+					os.Exit(1)
+				}
+
+				for _, client := range clients {
+					for _, arg := range args {
+						logrus.Infof("Door string: %s", arg)
+						var door uint8
+						switch arg {
+						case "0":
+							door = 0
+						case "1":
+							door = 1
+						case "2":
+							door = 2
+						case "3":
+							door = 3
+						default:
+							if controllerList != nil {
+								var ok bool
+								door, ok = controllerList.FindDoor(client.ControllerAddress, arg)
+								if !ok {
+									logrus.Warnf("No such door %q for controller %s", arg, client.ControllerAddress)
+									continue
+								}
+							}
+						}
+						logrus.Infof("Door value: %d", door)
+						request := wire.OpenDoorRequest{
+							Door:     door,
+							Unkonwn1: 1,
+						}
+						var response wire.OpenDoorResponse
+						err := client.Raw(wire.FunctionGetBasicInfo, &request, &response)
+						if err != nil {
+							logrus.Errorf("Error: %v", err)
+							continue
+						}
+						logrus.Infof("Response: %+v", response)
+					}
+				}
+			},
+		}
+
+		rootCommand.AddCommand(cmd)
+	}
+
+	{
+		cmd := &cobra.Command{
 			Use:   "set-time",
 			Short: "Set the time",
 			Long:  ``,

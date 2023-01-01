@@ -84,10 +84,14 @@ func main() {
 					logrus.Infof("--------------------")
 
 					fromClient := false
+					var controllerAddress string
 					if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
 						if tcp, ok := tcpLayer.(*layers.TCP); ok {
 							if tcp.DstPort == 60000 {
 								fromClient = true
+								controllerAddress = packet.NetworkLayer().NetworkFlow().Dst().String()
+							} else {
+								controllerAddress = packet.NetworkLayer().NetworkFlow().Dst().String()
 							}
 						}
 					}
@@ -95,7 +99,7 @@ func main() {
 					data := packet.TransportLayer().LayerPayload()
 					logrus.Debugf("Data (%d): %X", len(data), data)
 
-					err = parseData(data, fromClient, personnelList)
+					err = parseData(data, fromClient, controllerAddress, controllerList, personnelList)
 					if err != nil {
 						logrus.Warnf("Could not parse data: [%T] %v", err, err)
 					}
@@ -114,7 +118,7 @@ func main() {
 	os.Exit(0)
 }
 
-func parseData(fullContents []byte, fromClient bool, personnelList cobrafile.PersonnelList) error {
+func parseData(fullContents []byte, fromClient bool, controllerAddress string, controllerList cobrafile.ControllerList, personnelList cobrafile.PersonnelList) error {
 	if fromClient {
 		logrus.Infof("Mode: Client")
 	} else {
@@ -461,27 +465,28 @@ func parseData(fullContents []byte, fromClient bool, personnelList cobrafile.Per
 			}
 			logrus.Infof("Result: %d", result)
 		}
-	case 0x109D:
-		logrus.Infof("Function: Long-distance open door")
+	case wire.FunctionOpenDoor:
+		logrus.Infof("Function: OpenDoor")
 		if fromClient {
-			door, err := data.ReadUint8()
+			var request wire.OpenDoorRequest
+			err = wire.Decode(data.Bytes(), &request)
 			if err != nil {
-				return fmt.Errorf("could not read door: %w", err)
+				return err
 			}
-			unknown1, err := data.ReadUint8() // I've seen this as "1".
-			if err != nil {
-				return fmt.Errorf("could not read unknown1: %w", err)
+			logrus.Infof("Request: %+v", request)
+			if controllerList != nil {
+				door := controllerList.LookupDoor(controllerAddress, request.Door)
+				if door != "" {
+					logrus.Infof("Door: %s", door)
+				}
 			}
-			if !wire.IsAll(data.Bytes(), 0) {
-				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
-			}
-
-			logrus.Infof("Door: %d", door)
-			logrus.Infof("Unknown1: %d", unknown1)
 		} else {
-			if !wire.IsAll(data.Bytes(), 0) {
-				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
+			var response wire.OpenDoorResponse
+			err = wire.Decode(data.Bytes(), &response)
+			if err != nil {
+				return err
 			}
+			logrus.Infof("Response: %+v", response)
 		}
 	case 0x10F1:
 		logrus.Infof("Function: Read")
@@ -680,7 +685,7 @@ func parseData(fullContents []byte, fromClient bool, personnelList cobrafile.Per
 			logrus.Infof("Response: %+v", response)
 		}
 	case wire.FunctionUpdatePermissions:
-		logrus.Infof("Function: Add or modify permissions")
+		logrus.Infof("Function: UpdatePermissions")
 		if fromClient {
 			var request wire.UpdatePermissionsRequest
 			err = wire.Decode(data.Bytes(), &request)
