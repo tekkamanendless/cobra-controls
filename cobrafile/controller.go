@@ -96,7 +96,7 @@ func (l ControllerList) FindDoor(address string, door string) (uint8, bool) {
 	for _, controller := range l {
 		if controller.Address == address {
 			for d := range controller.Doors {
-				if strings.ToLower(controller.Doors[d]) == strings.ToLower(door) {
+				if strings.EqualFold(controller.Doors[d], door) {
 					return uint8(d) + 1, true
 				}
 			}
