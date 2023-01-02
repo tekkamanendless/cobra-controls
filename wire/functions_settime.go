@@ -9,7 +9,7 @@ type SetTimeRequest struct {
 	CurrentTime time.Time // This is the new time.
 }
 
-func (r *SetTimeRequest) Encode() ([]byte, error) {
+func (r SetTimeRequest) Encode() ([]byte, error) {
 	writer := NewWriter()
 	year := r.CurrentTime.Year()
 	if year > 2000 {
@@ -86,7 +86,7 @@ type SetTimeResponse struct {
 	Reserved3     uint8
 }
 
-func (r *SetTimeResponse) Encode() ([]byte, error) {
+func (r SetTimeResponse) Encode() ([]byte, error) {
 	writer := NewWriter()
 	year := r.CurrentTime.Year()
 	if year > 2000 {

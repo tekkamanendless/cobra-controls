@@ -9,7 +9,7 @@ import (
 
 type GetBasicInfoRequest struct{}
 
-func (r *GetBasicInfoRequest) Encode() ([]byte, error) {
+func (r GetBasicInfoRequest) Encode() ([]byte, error) {
 	return []byte{}, nil
 }
 
@@ -27,7 +27,7 @@ type GetBasicInfoResponse struct {
 	Model     uint8
 }
 
-func (r *GetBasicInfoResponse) Encode() ([]byte, error) {
+func (r GetBasicInfoResponse) Encode() ([]byte, error) {
 	writer := NewWriter()
 	writer.WriteDate(r.IssueDate)
 	writer.WriteUint8(r.Unknown1)

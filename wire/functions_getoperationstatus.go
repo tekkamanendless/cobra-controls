@@ -107,7 +107,7 @@ func (r *Record) AccessGranted() bool {
 	return (r.RecordState&0b10000000 == 0)
 }
 
-func (r *Record) Encode() ([]byte, error) {
+func (r Record) Encode() ([]byte, error) {
 	writer := NewWriter()
 	writer.WriteUint16(r.IDNumber)
 	writer.WriteUint8(r.AreaNumber)
@@ -160,7 +160,7 @@ type GetOperationStatusResponse struct {
 	Reserved3     uint8
 }
 
-func (r *GetOperationStatusResponse) Encode() ([]byte, error) {
+func (r GetOperationStatusResponse) Encode() ([]byte, error) {
 	writer := NewWriter()
 	year := r.CurrentTime.Year()
 	if year > 2000 {

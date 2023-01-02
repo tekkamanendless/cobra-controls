@@ -3,13 +3,15 @@ package wire
 import (
 	"fmt"
 	"net"
+
+	"github.com/sirupsen/logrus"
 )
 
 type GetNetworkInfoRequest struct {
 	Unknown1 uint8
 }
 
-func (r *GetNetworkInfoRequest) Encode() ([]byte, error) {
+func (r GetNetworkInfoRequest) Encode() ([]byte, error) {
 	writer := NewWriter()
 	writer.WriteUint8(r.Unknown1)
 	return writer.Bytes(), nil
@@ -36,18 +38,19 @@ type GetNetworkInfoResponse struct {
 	Port       uint16
 }
 
-func (r *GetNetworkInfoResponse) Encode() ([]byte, error) {
+func (r GetNetworkInfoResponse) Encode() ([]byte, error) {
 	writer := NewWriter()
 	if len(r.MACAddress) != 6 {
 		return nil, fmt.Errorf("invalid MAC address size: %d (expected: 6)", len(r.MACAddress))
 	}
 	writer.WriteBytes(r.MACAddress)
 	if len(r.IPAddress) != 4 {
+		logrus.Debugf("IP address: %+v (%d)", r.IPAddress, len(r.IPAddress))
 		return nil, fmt.Errorf("invalid IP address size: %d (expected: 4)", len(r.IPAddress))
 	}
 	writer.WriteBytes(r.IPAddress)
 	if len(r.Netmask) != 4 {
-		return nil, fmt.Errorf("invalid netmaks size: %d (expected: 4)", len(r.Netmask))
+		return nil, fmt.Errorf("invalid netmask size: %d (expected: 4)", len(r.Netmask))
 	}
 	writer.WriteBytes(r.Netmask)
 	if len(r.Gateway) != 4 {

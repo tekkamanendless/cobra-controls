@@ -11,7 +11,7 @@ type OpenDoorRequest struct {
 	Unkonwn1 uint8
 }
 
-func (r *OpenDoorRequest) Encode() ([]byte, error) {
+func (r OpenDoorRequest) Encode() ([]byte, error) {
 	writer := NewWriter()
 	writer.WriteUint8(r.Door)
 	writer.WriteUint8(r.Unkonwn1)
@@ -38,7 +38,7 @@ func (r *OpenDoorRequest) Decode(b []byte) error {
 type OpenDoorResponse struct {
 }
 
-func (r *OpenDoorResponse) Encode() ([]byte, error) {
+func (r OpenDoorResponse) Encode() ([]byte, error) {
 	writer := NewWriter()
 	return writer.Bytes(), nil
 }
