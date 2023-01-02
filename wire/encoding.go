@@ -29,18 +29,11 @@ type Decoder interface {
 
 // Encode an object to the wire.
 func Encode(v any) ([]byte, error) {
-	if e, ok := v.(Encoder); ok { // TODO: MOVE THIS TO encodeViaReflection
-		return e.Encode()
-	}
 	return encodeViaReflection(v, encodingOptions{})
 }
 
 // Decode an object from the wire.
 func Decode(data []byte, v any) error {
-	if d, ok := v.(Decoder); ok { // TODO: MOVE THIS TO decodeViaReflection
-		return d.Decode(data)
-	}
-
 	logrus.Debugf("Decode: v: %+v", v)
 	return decodeViaReflection(NewReader(data), reflect.ValueOf(v), encodingOptions{})
 }
@@ -95,6 +88,11 @@ func parseOptionsFromTag(tag string) (encodingOptions, error) {
 
 func encodeViaReflection(input any, options encodingOptions) ([]byte, error) {
 	writer := NewWriter()
+
+	if e, ok := input.(Encoder); ok {
+		logrus.Debugf("encodeViaReflection: Encoding via Encoder: %t", input)
+		return e.Encode()
+	}
 
 	myType := reflect.TypeOf(input)
 	logrus.Debugf("encodeViaReflection: Kind: %v", myType.Kind())
@@ -184,6 +182,13 @@ func encodeViaReflection(input any, options encodingOptions) ([]byte, error) {
 }
 
 func decodeViaReflection(reader *Reader, myValue reflect.Value, options encodingOptions) error {
+	if myValue.CanInterface() {
+		if d, ok := myValue.Interface().(Decoder); ok {
+			logrus.Debugf("decodeViaReflection: Decoding via Decoder: %+v", myValue.Interface())
+			return d.Decode(reader.Bytes())
+		}
+	}
+
 	myType := myValue.Type()
 	logrus.Debugf("decodeViaReflection: myValue: %+v", myValue)
 	logrus.Debugf("decodeViaReflection: myType.Kind: %+v", myType.Kind())
