@@ -29,7 +29,7 @@ type Decoder interface {
 
 // Encode an object to the wire.
 func Encode(v any) ([]byte, error) {
-	if e, ok := v.(Encoder); ok {
+	if e, ok := v.(Encoder); ok { // TODO: MOVE THIS TO encodeViaReflection
 		return e.Encode()
 	}
 	return encodeViaReflection(v, encodingOptions{})
@@ -37,7 +37,7 @@ func Encode(v any) ([]byte, error) {
 
 // Decode an object from the wire.
 func Decode(data []byte, v any) error {
-	if d, ok := v.(Decoder); ok {
+	if d, ok := v.(Decoder); ok { // TODO: MOVE THIS TO decodeViaReflection
 		return d.Decode(data)
 	}
 
