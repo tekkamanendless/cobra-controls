@@ -219,58 +219,22 @@ func parseData(fullContents []byte, fromClient bool, controllerAddress string, c
 			}
 			logrus.Infof("Response: %+v", response)
 		}
-
-	case 0x108D:
-		logrus.Infof("Function: Read the records information (by index)")
+	case wire.FunctionGetRecord:
+		logrus.Infof("Function: GetRecord")
 		if fromClient {
-			recordIndex, err := data.ReadUint32()
+			var request wire.GetRecordRequest
+			err = wire.Decode(data.Bytes(), &request)
 			if err != nil {
-				return fmt.Errorf("could not read record index: %w", err)
+				return err
 			}
-			// All remaining bytes are reserved.
-			if !wire.IsAll(data.Bytes(), 0) {
-				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
-			}
-			logrus.Infof("Record index: %d", recordIndex)
+			logrus.Infof("Request: %+v", request)
 		} else {
-			cardNumber, err := data.ReadUint16()
+			var response wire.GetRecordResponse
+			err = wire.Decode(data.Bytes(), &response)
 			if err != nil {
-				return fmt.Errorf("could not read card number: %w", err)
+				return err
 			}
-			userNumber, err := data.ReadUint8()
-			if err != nil {
-				return fmt.Errorf("could not read user number: %w", err)
-			}
-			brushCardState, err := data.ReadUint8()
-			if err != nil {
-				return fmt.Errorf("could not read brush card state: %w", err)
-			}
-			brushCardDate, err := data.ReadDate()
-			if err != nil {
-				return fmt.Errorf("could not read brush card date: %w", err)
-			}
-			brushCardTime, err := data.ReadTime()
-			if err != nil {
-				return fmt.Errorf("could not read brush card time: %w", err)
-			}
-			// All remaining bytes are reserved.
-			if !wire.IsAll(data.Bytes(), 0) {
-				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
-			}
-
-			logrus.Infof("   Card number: %d", cardNumber)
-			logrus.Infof("   User number: %d", userNumber)
-			logrus.Infof("   Card ID: %s", wire.CardID(userNumber, cardNumber))
-			if personnelList != nil {
-				if person := personnelList.FindByCardID(wire.CardID(userNumber, cardNumber)); person != nil {
-					logrus.Infof("   Person: %+v", *person)
-				}
-			}
-			logrus.Infof("   ")
-			logrus.Infof("   Brush card state: %d", brushCardState)
-			logrus.Infof("   Brush date: %v", brushCardDate)
-			logrus.Infof("   Brush time: %v", brushCardTime)
-
+			logrus.Infof("Response: %+v", response)
 		}
 	case 0x108E:
 		logrus.Infof("Function: Remove a specified number of records")
