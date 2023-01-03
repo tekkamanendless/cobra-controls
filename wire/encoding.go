@@ -42,6 +42,7 @@ func Decode(reader *Reader, v any) error {
 // type:{date,datetime,date,uint24}
 // length:{*,[0-9]+}
 type encodingOptions struct {
+	Name   string // This is primarily passed in to help with rendering a meaningful error message.
 	Type   string
 	Length int // -1 for "read everything until the end"
 }
@@ -92,6 +93,11 @@ func encodeViaReflection(writer *Writer, input any, options encodingOptions) err
 		return e.Encode(writer)
 	}
 
+	var fieldPrefix string
+	if options.Name != "" {
+		fieldPrefix = "field " + options.Name + ": "
+	}
+
 	myType := reflect.TypeOf(input)
 	logrus.Debugf("encodeViaReflection: Kind: %v", myType.Kind())
 	switch myType.Kind() {
@@ -112,7 +118,7 @@ func encodeViaReflection(writer *Writer, input any, options encodingOptions) err
 				writer.WriteDate(timeValue)
 				writer.WriteTime(timeValue)
 			default:
-				return fmt.Errorf("unhandled type: %s", options.Type)
+				return fmt.Errorf(fieldPrefix+"unhandled type: %s", options.Type)
 			}
 		} else {
 			myValue := reflect.ValueOf(input)
@@ -128,6 +134,7 @@ func encodeViaReflection(writer *Writer, input any, options encodingOptions) err
 				if err != nil {
 					return err
 				}
+				options.Name = myField.Name
 				var myFieldValue reflect.Value
 				if myField.IsExported() {
 					myFieldValue = myValue.Field(f)
@@ -161,7 +168,7 @@ func encodeViaReflection(writer *Writer, input any, options encodingOptions) err
 				writer.WriteBytes(reflect.ValueOf(input).Bytes())
 			}
 		} else {
-			return fmt.Errorf("unimplemented: encoding an array of kind %q", myType.Elem().Kind())
+			return fmt.Errorf(fieldPrefix+"unimplemented: encoding an array of kind %q", myType.Elem().Kind())
 		}
 	case reflect.Slice:
 		if myType.Elem().Kind() == reflect.Uint8 {
@@ -170,10 +177,10 @@ func encodeViaReflection(writer *Writer, input any, options encodingOptions) err
 			logrus.Debugf("encodeViaReflection: writing slice of bytes: %x", reflect.ValueOf(input).Bytes())
 			writer.WriteBytes(reflect.ValueOf(input).Bytes())
 		} else {
-			return fmt.Errorf("unimplemented: encoding a slice of kind %q", myType.Elem().Kind())
+			return fmt.Errorf(fieldPrefix+"unimplemented: encoding a slice of kind %q", myType.Elem().Kind())
 		}
 	default:
-		return fmt.Errorf("unimplemented: kind: %v", myType.Kind())
+		return fmt.Errorf(fieldPrefix+"unimplemented: kind: %v", myType.Kind())
 	}
 	return nil
 }
@@ -184,6 +191,11 @@ func decodeViaReflection(reader *Reader, myValue reflect.Value, options encoding
 			logrus.Debugf("decodeViaReflection: Decoding via Decoder: %+v", myValue.Interface())
 			return d.Decode(reader)
 		}
+	}
+
+	var fieldPrefix string
+	if options.Name != "" {
+		fieldPrefix = "field " + options.Name + ": "
 	}
 
 	myType := myValue.Type()
@@ -204,40 +216,40 @@ func decodeViaReflection(reader *Reader, myValue reflect.Value, options encoding
 			case TypeDate:
 				v, err := reader.ReadDate()
 				if err != nil {
-					return fmt.Errorf("could not read date: %w", err)
+					return fmt.Errorf(fieldPrefix+"could not read date: %w", err)
 				}
 				if myValue.CanSet() {
 					myValue.Set(reflect.ValueOf(v))
 				} else {
-					return fmt.Errorf("could not set date: %w", err)
+					return fmt.Errorf(fieldPrefix+"could not set date: %w", err)
 				}
 			case TypeTime:
 				v, err := reader.ReadTime()
 				if err != nil {
-					return fmt.Errorf("could not read time: %w", err)
+					return fmt.Errorf(fieldPrefix+"could not read time: %w", err)
 				}
 				if myValue.CanSet() {
 					myValue.Set(reflect.ValueOf(v))
 				} else {
-					return fmt.Errorf("could not set time: %w", err)
+					return fmt.Errorf(fieldPrefix+"could not set time: %w", err)
 				}
 			case TypeDateTime:
 				v1, err := reader.ReadDate()
 				if err != nil {
-					return fmt.Errorf("could not read date: %w", err)
+					return fmt.Errorf(fieldPrefix+"could not read date: %w", err)
 				}
 				v2, err := reader.ReadTime()
 				if err != nil {
-					return fmt.Errorf("could not read time: %w", err)
+					return fmt.Errorf(fieldPrefix+"could not read time: %w", err)
 				}
 				v := MergeDateTime(v1, v2)
 				if myValue.CanSet() {
 					myValue.Set(reflect.ValueOf(v))
 				} else {
-					return fmt.Errorf("could not set datetime: %w", err)
+					return fmt.Errorf(fieldPrefix+"could not set datetime: %w", err)
 				}
 			default:
-				return fmt.Errorf("unhandled type: %s", options.Type)
+				return fmt.Errorf(fieldPrefix+"unhandled type: %s", options.Type)
 			}
 		} else {
 			for f := 0; f < myType.NumField(); f++ {
@@ -252,6 +264,7 @@ func decodeViaReflection(reader *Reader, myValue reflect.Value, options encoding
 				if err != nil {
 					return err
 				}
+				options.Name = myField.Name
 				myFieldValue := myValue.Field(f)
 				err = decodeViaReflection(reader, myFieldValue, options)
 				if err != nil {
@@ -272,52 +285,41 @@ func decodeViaReflection(reader *Reader, myValue reflect.Value, options encoding
 
 			contents, err := reader.ReadBytes(options.Length)
 			if err != nil {
-				return fmt.Errorf("could not read remainder: %w", err)
+				return fmt.Errorf(fieldPrefix+"could not read remainder: %w", err)
 			}
 			if myType.Len() == 0 {
 				if IsAll(contents, 0) {
 					logrus.Debugf("decodeViaReflection: contents is all 0.")
 					contents = contents[len(contents):]
 				} else {
-					logrus.Debugf("decodeViaReflection: contents is not 0: %x", contents)
+					logrus.Debugf(fieldPrefix+"decodeViaReflection: contents is not 0: %x", contents)
 				}
 			}
 			if myType.Len() != len(contents) {
-				return fmt.Errorf("unexpected length: %d (expected: %d)", len(contents), myType.Len())
+				return fmt.Errorf(fieldPrefix+"unexpected length: %d (expected: %d)", len(contents), myType.Len())
 			}
 			for i := 0; i < myType.Len(); i++ {
 				myValue.Index(i).Set(reflect.ValueOf(contents[i]))
 			}
 		} else {
-			return fmt.Errorf("unhandled array type: %v", myType.Elem().Kind())
+			return fmt.Errorf(fieldPrefix+"unhandled array type: %v", myType.Elem().Kind())
 		}
 	case reflect.Slice:
 		logrus.Debugf("decodeViaReflection: slice")
 		if myType.Elem().Kind() == reflect.Uint8 {
 			logrus.Debugf("decodeViaReflection: slice of type uint8")
 
-			contents, err := reader.ReadBytes(reader.Length())
-			if err != nil {
-				return fmt.Errorf("could not read remainder: %w", err)
+			if options.Length < 0 {
+				options.Length = reader.Length()
 			}
-			var remainder []byte
 
-			// A slice doesn't have the option of being "zero" length.  An un-length-limited
-			// slice will grow to the entire length of the contents.
-			if options.Length <= 0 {
-				options.Length = len(contents)
+			contents, err := reader.ReadBytes(options.Length)
+			if err != nil {
+				return fmt.Errorf(fieldPrefix+"could not read remainder: %w", err)
 			}
-			if options.Length < len(contents) {
-				remainder = contents[options.Length:]
-				contents = contents[:options.Length]
-				if IsAll(remainder, 0) {
-					logrus.Debugf("decodeViaReflection: contents is all 0.")
-				} else {
-					logrus.Debugf("decodeViaReflection: contents is not 0: %x", contents)
-				}
-			}
+
 			if options.Length != len(contents) {
-				return fmt.Errorf("unexpected length: %d (expected: %d)", len(contents), options.Length)
+				return fmt.Errorf(fieldPrefix+"unexpected length: %d (expected: %d)", len(contents), options.Length)
 			}
 			logrus.Debugf("decodeViaReflection: making slice of length %d", options.Length)
 			newValue := reflect.MakeSlice(myType, options.Length, options.Length)
@@ -327,11 +329,11 @@ func decodeViaReflection(reader *Reader, myValue reflect.Value, options encoding
 			}
 			myValue.Set(newValue)
 		} else {
-			return fmt.Errorf("unhandled slice type: %v", myType.Elem().Kind())
+			return fmt.Errorf(fieldPrefix+"unhandled slice type: %v", myType.Elem().Kind())
 		}
 	case reflect.Uint8:
 		if options.Type != "" {
-			return fmt.Errorf("invalid type for uint8: %q", options.Type)
+			return fmt.Errorf(fieldPrefix+"invalid type for uint8: %q", options.Type)
 		}
 		v, err := reader.ReadUint8()
 		if err != nil {
@@ -341,11 +343,11 @@ func decodeViaReflection(reader *Reader, myValue reflect.Value, options encoding
 		if myValue.CanUint() {
 			myValue.SetUint(uint64(v))
 		} else {
-			return fmt.Errorf("could not set uint: %w", err)
+			return fmt.Errorf(fieldPrefix+"could not set uint: %w", err)
 		}
 	case reflect.Uint16:
 		if options.Type != "" {
-			return fmt.Errorf("invalid type for uint16: %q", options.Type)
+			return fmt.Errorf(fieldPrefix+"invalid type for uint16: %q", options.Type)
 		}
 		v, err := reader.ReadUint16()
 		if err != nil {
@@ -355,7 +357,7 @@ func decodeViaReflection(reader *Reader, myValue reflect.Value, options encoding
 		if myValue.CanUint() {
 			myValue.SetUint(uint64(v))
 		} else {
-			return fmt.Errorf("could not set uint: %w", err)
+			return fmt.Errorf(fieldPrefix+"could not set uint: %w", err)
 		}
 	case reflect.Uint32:
 		switch options.Type {
@@ -368,7 +370,7 @@ func decodeViaReflection(reader *Reader, myValue reflect.Value, options encoding
 			if myValue.CanUint() {
 				myValue.SetUint(uint64(v))
 			} else {
-				return fmt.Errorf("could not set uint: %w", err)
+				return fmt.Errorf(fieldPrefix+"could not set uint: %w", err)
 			}
 		case "":
 			v, err := reader.ReadUint32()
@@ -379,13 +381,13 @@ func decodeViaReflection(reader *Reader, myValue reflect.Value, options encoding
 			if myValue.CanUint() {
 				myValue.SetUint(uint64(v))
 			} else {
-				return fmt.Errorf("could not set uint: %w", err)
+				return fmt.Errorf(fieldPrefix+"could not set uint: %w", err)
 			}
 		default:
-			return fmt.Errorf("invalid type for uint8: %q", options.Type)
+			return fmt.Errorf(fieldPrefix+"invalid type for uint8: %q", options.Type)
 		}
 	default:
-		return fmt.Errorf("unhandled kind: %v", myType.Kind())
+		return fmt.Errorf(fieldPrefix+"unhandled kind: %v", myType.Kind())
 	}
 	return nil
 }

@@ -12,6 +12,6 @@ type GetRecordResponse struct {
 	AreaNumber        uint8
 	BrushCardState    uint8
 	BrushCardDateTime time.Time `wire:"type:datetime"`
-	Unknown1          []byte
-	_                 [0]byte `wire:"length:*"` // Fail if there are any leftover bytes.
+	Unknown1          []byte    `wire:"length:*"`
+	_                 [0]byte   `wire:"length:*"` // Fail if there are any leftover bytes.
 }

@@ -11,7 +11,6 @@ func TestGetRecord(t *testing.T) {
 			input: "0100000000000000000000000000000000000000000000000000",
 			output: GetRecordRequest{
 				RecordIndex: 1,
-				//Remainder:   [0]uint8{},
 			},
 		},
 		{
