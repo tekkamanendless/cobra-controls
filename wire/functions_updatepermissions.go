@@ -1,10 +1,7 @@
 package wire
 
 import (
-	"fmt"
 	"time"
-
-	"github.com/sirupsen/logrus"
 )
 
 type UpdatePermissionsRequest struct {
@@ -12,92 +9,15 @@ type UpdatePermissionsRequest struct {
 	CardID    uint16
 	Area      uint8
 	Door      uint8
-	StartDate time.Time
-	EndDate   time.Time
-	Time      uint8  // TODO: WHAT IS THIS
-	Password  uint32 // 24-bit password
-	Standby   []byte
-	_         [0]byte `wire:"length:*"` // Fail if there are any leftover bytes.
-}
-
-func (r UpdatePermissionsRequest) Encode(writer *Writer) error {
-	writer.WriteUint16(r.Unknown1)
-	writer.WriteUint16(r.CardID)
-	writer.WriteUint8(r.Area)
-	writer.WriteUint8(r.Door)
-	writer.WriteDate(r.StartDate)
-	writer.WriteDate(r.EndDate)
-	writer.WriteUint8(r.Time)
-	writer.WriteUint24(r.Password)
-	if len(r.Standby) != 4 {
-		return fmt.Errorf("not enough bytes for standby: %d (expected: 4)", len(r.Standby))
-	}
-	writer.WriteBytes(r.Standby)
-	return nil
-}
-
-func (r *UpdatePermissionsRequest) Decode(reader *Reader) error {
-	var err error
-	r.Unknown1, err = reader.ReadUint16()
-	if err != nil {
-		return fmt.Errorf("could not read unknown1: %w", err)
-	}
-	r.CardID, err = reader.ReadUint16()
-	if err != nil {
-		return fmt.Errorf("could not read card ID: %w", err)
-	}
-	r.Area, err = reader.ReadUint8()
-	if err != nil {
-		return fmt.Errorf("could not read area: %w", err)
-	}
-	r.Door, err = reader.ReadUint8()
-	if err != nil {
-		return fmt.Errorf("could not read door: %w", err)
-	}
-	r.StartDate, err = reader.ReadDate()
-	if err != nil {
-		return fmt.Errorf("could not read start date: %w", err)
-	}
-	r.EndDate, err = reader.ReadDate()
-	if err != nil {
-		return fmt.Errorf("could not read end date: %w", err)
-	}
-	r.Time, err = reader.ReadUint8()
-	if err != nil {
-		return fmt.Errorf("could not read time: %w", err)
-	}
-	r.Password, err = reader.ReadUint24()
-	if err != nil {
-		return fmt.Errorf("could not read password: %w", err)
-	}
-	r.Standby, err = reader.ReadBytes(4)
-	if err != nil {
-		return fmt.Errorf("could not read standby: %w", err)
-	}
-	if !IsAll(reader.Bytes(), 0) {
-		return fmt.Errorf("unexpected contents: %x", reader.Bytes())
-	}
-	return nil
+	StartDate time.Time `wire:"type:date"`
+	EndDate   time.Time `wire:"type:date"`
+	Time      uint8     // TODO: WHAT IS THIS
+	Password  uint32    `wire:"type:uint24"` // 24-bit password
+	Standby   []byte    `wire:"length:4"`
+	_         [0]byte   `wire:"length:*"` // Fail if there are any leftover bytes.
 }
 
 type UpdatePermissionsResponse struct {
 	Result uint8
 	_      [0]byte `wire:"length:*"` // Fail if there are any leftover bytes.
-}
-
-func (r UpdatePermissionsResponse) Encode(writer *Writer) error {
-	writer.WriteUint8(r.Result)
-	return nil
-}
-
-func (r *UpdatePermissionsResponse) Decode(reader *Reader) error {
-	var err error
-	r.Result, err = reader.ReadUint8()
-	if err != nil {
-		return fmt.Errorf("could not read result: %w", err)
-	}
-	if !IsAll(reader.Bytes(), 0) {
-		logrus.Warnf("unexpected contents: %x", reader.Bytes())
-	}
-	return nil
 }
