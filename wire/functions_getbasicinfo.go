@@ -7,13 +7,13 @@ import (
 
 type GetBasicInfoRequest struct{}
 
-func (r GetBasicInfoRequest) Encode() ([]byte, error) {
-	return []byte{}, nil
+func (r GetBasicInfoRequest) Encode(writer *Writer) error {
+	return nil
 }
 
-func (r *GetBasicInfoRequest) Decode(b []byte) error {
-	if !IsAll(b, 0) {
-		return fmt.Errorf("unexpected contents: %x", b)
+func (r *GetBasicInfoRequest) Decode(reader *Reader) error {
+	if !IsAll(reader.Bytes(), 0) {
+		return fmt.Errorf("unexpected contents: %x", reader.Bytes())
 	}
 	return nil
 }
@@ -25,8 +25,7 @@ type GetBasicInfoResponse struct {
 	Unknown2  []byte
 }
 
-func (r GetBasicInfoResponse) Encode() ([]byte, error) {
-	writer := NewWriter()
+func (r GetBasicInfoResponse) Encode(writer *Writer) error {
 	year := r.IssueDate.Year()
 	if year > 2000 {
 		year -= 2000
@@ -37,12 +36,11 @@ func (r GetBasicInfoResponse) Encode() ([]byte, error) {
 	writer.WriteUint8(r.Version)
 	writer.WriteUint8(r.Model)
 	writer.WriteBytes(r.Unknown2)
-	return writer.Bytes(), nil
+	return nil
 }
 
-func (r *GetBasicInfoResponse) Decode(b []byte) error {
+func (r *GetBasicInfoResponse) Decode(reader *Reader) error {
 	var err error
-	reader := NewReader(b)
 	year, err := reader.ReadUint8()
 	if err != nil {
 		return fmt.Errorf("could not read year: %w", err)

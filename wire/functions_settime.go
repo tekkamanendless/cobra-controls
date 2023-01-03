@@ -9,8 +9,7 @@ type SetTimeRequest struct {
 	CurrentTime time.Time // This is the new time.
 }
 
-func (r SetTimeRequest) Encode() ([]byte, error) {
-	writer := NewWriter()
+func (r SetTimeRequest) Encode(writer *Writer) error {
 	year := r.CurrentTime.Year()
 	if year > 2000 {
 		year -= 2000
@@ -22,11 +21,10 @@ func (r SetTimeRequest) Encode() ([]byte, error) {
 	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Hour())))
 	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Minute())))
 	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Second())))
-	return writer.Bytes(), nil
+	return nil
 }
 
-func (r *SetTimeRequest) Decode(b []byte) error {
-	reader := NewReader(b)
+func (r *SetTimeRequest) Decode(reader *Reader) error {
 	var err error
 	year, err := reader.ReadUint8()
 	if err != nil {
@@ -67,7 +65,7 @@ func (r *SetTimeRequest) Decode(b []byte) error {
 	_ = week
 
 	if !IsAll(reader.Bytes(), 0) {
-		return fmt.Errorf("unexpected contents: %x", b)
+		return fmt.Errorf("unexpected contents: %x", reader.Bytes())
 	}
 
 	return nil
@@ -86,8 +84,7 @@ type SetTimeResponse struct {
 	Reserved3     uint8
 }
 
-func (r SetTimeResponse) Encode() ([]byte, error) {
-	writer := NewWriter()
+func (r SetTimeResponse) Encode(writer *Writer) error {
 	year := r.CurrentTime.Year()
 	if year > 2000 {
 		year -= 2000
@@ -99,11 +96,10 @@ func (r SetTimeResponse) Encode() ([]byte, error) {
 	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Hour())))
 	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Minute())))
 	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Second())))
-	return writer.Bytes(), nil
+	return nil
 }
 
-func (r *SetTimeResponse) Decode(b []byte) error {
-	reader := NewReader(b)
+func (r *SetTimeResponse) Decode(reader *Reader) error {
 	var err error
 	year, err := reader.ReadUint8()
 	if err != nil {
@@ -144,7 +140,7 @@ func (r *SetTimeResponse) Decode(b []byte) error {
 	_ = week
 
 	if !IsAll(reader.Bytes(), 0) {
-		return fmt.Errorf("unexpected contents: %x", b)
+		return fmt.Errorf("unexpected contents: %x", reader.Bytes())
 	}
 
 	return nil

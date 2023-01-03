@@ -34,7 +34,7 @@ func (c *Client) init() error {
 	return nil
 }
 
-func (c *Client) Raw(f uint16, e Encoder, d Decoder) error {
+func (c *Client) Raw(f uint16, request any, response any) error {
 	if err := c.init(); err != nil {
 		return err
 	}
@@ -42,10 +42,9 @@ func (c *Client) Raw(f uint16, e Encoder, d Decoder) error {
 	{
 		c.conn.SetDeadline(time.Now().Add(5 * time.Second))
 
-		var contents []byte
-		if e != nil {
-			var err error
-			contents, err = e.Encode()
+		payloadWriter := NewWriter()
+		if request != nil {
+			err := Encode(payloadWriter, request)
 			if err != nil {
 				return fmt.Errorf("could not encode contents: %w", err)
 			}
@@ -54,29 +53,30 @@ func (c *Client) Raw(f uint16, e Encoder, d Decoder) error {
 		envelope := Envelope{
 			BoardAddress: c.BoardAddress,
 			Function:     f,
-			Contents:     contents,
+			Contents:     payloadWriter.Bytes(),
 		}
 
-		messageBytes, err := Encode(&envelope)
+		messageWriter := NewWriter()
+		err := Encode(messageWriter, &envelope)
 		if err != nil {
 			return fmt.Errorf("could not encode envelope: %v", err)
 		}
-		bytesWritten, err := c.conn.Write(messageBytes)
+		bytesWritten, err := c.conn.Write(messageWriter.Bytes())
 		if err != nil {
 			c.conn.Close()
 			c.conn = nil
 			return fmt.Errorf("could not write message: %v", err)
 		}
 		logrus.Debugf("Bytes written: %d", bytesWritten)
-		if bytesWritten != len(messageBytes) {
-			return fmt.Errorf("could not write full message; wrote %d bytes (expected: %d)", bytesWritten, len(messageBytes))
+		if bytesWritten != messageWriter.Length() {
+			return fmt.Errorf("could not write full message; wrote %d bytes (expected: %d)", bytesWritten, messageWriter.Length())
 		}
 	}
 
 	{
 		c.conn.SetDeadline(time.Now().Add(5 * time.Second))
 
-		contents := make([]byte, 1024)
+		contents := make([]byte, 1024) // TODO: Consider a buffer size setting for the client.
 		bytesRead, err := c.conn.Read(contents)
 		if err != nil {
 			c.conn.Close()
@@ -86,15 +86,17 @@ func (c *Client) Raw(f uint16, e Encoder, d Decoder) error {
 		contents = contents[0:bytesRead]
 		logrus.Debugf("Bytes read: (%d) %x", bytesRead, contents)
 
+		reader := NewReader(contents)
+
 		var envelope Envelope
-		err = Decode(contents, &envelope)
+		err = Decode(reader, &envelope)
 		if err != nil {
 			return fmt.Errorf("could not decode envelope: %v", err)
 		}
 		logrus.Debugf("Response: %x", envelope.Contents)
 
-		if d != nil {
-			err = Decode(envelope.Contents, d)
+		if response != nil {
+			err = Decode(NewReader(envelope.Contents), response)
 			if err != nil {
 				return fmt.Errorf("could not decode response: %v", err)
 			}

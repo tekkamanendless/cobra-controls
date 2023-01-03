@@ -11,7 +11,11 @@ type Reader struct {
 
 func NewReader(data []byte) *Reader {
 	r := &Reader{
-		data: data,
+		data: []byte{},
+	}
+	if len(data) > 0 {
+		r.data = make([]byte, len(data))
+		copy(r.data, data)
 	}
 	return r
 }

@@ -27,7 +27,7 @@ func runEncodeDecodeTests(t *testing.T, rows []EncodeDecodeTest) {
 					require.Equal(t, row.input, fmt.Sprintf("%X", input))
 
 					newValue := reflect.New(reflect.TypeOf(row.output))
-					err := Decode(input, newValue.Interface())
+					err := Decode(NewReader(input), newValue.Interface())
 					if row.fail {
 						require.NotNil(t, err)
 						return
@@ -44,12 +44,13 @@ func runEncodeDecodeTests(t *testing.T, rows []EncodeDecodeTest) {
 					fmt.Sscanf(row.input, "%X", &input)
 					require.Equal(t, row.input, fmt.Sprintf("%X", input))
 
-					output, err := Encode(row.output)
+					writer := NewWriter()
+					err := Encode(writer, row.output)
 					require.Nil(t, err)
-					for len(output) < len(input) {
-						output = append(output, 0x00)
+					for len(writer.Bytes()) < len(input) {
+						writer.WriteUint8(0)
 					}
-					assert.DeepEqual(t, input, output)
+					assert.DeepEqual(t, input, writer.Bytes())
 				})
 			})
 		})

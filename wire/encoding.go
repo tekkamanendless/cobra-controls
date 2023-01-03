@@ -19,23 +19,23 @@ const (
 
 // Encoder can encode an object.
 type Encoder interface {
-	Encode() ([]byte, error)
+	Encode(*Writer) error
 }
 
 // Decoder can decode an object.
 type Decoder interface {
-	Decode([]byte) error
+	Decode(*Reader) error
 }
 
 // Encode an object to the wire.
-func Encode(v any) ([]byte, error) {
-	return encodeViaReflection(v, encodingOptions{})
+func Encode(writer *Writer, v any) error {
+	return encodeViaReflection(writer, v, encodingOptions{})
 }
 
 // Decode an object from the wire.
-func Decode(data []byte, v any) error {
+func Decode(reader *Reader, v any) error {
 	logrus.Debugf("Decode: v: %+v", v)
-	return decodeViaReflection(NewReader(data), reflect.ValueOf(v), encodingOptions{})
+	return decodeViaReflection(reader, reflect.ValueOf(v), encodingOptions{})
 }
 
 // encodingOptions represents the options encoded in the "wire" field tag.
@@ -86,19 +86,17 @@ func parseOptionsFromTag(tag string) (encodingOptions, error) {
 	return options, nil
 }
 
-func encodeViaReflection(input any, options encodingOptions) ([]byte, error) {
-	writer := NewWriter()
-
+func encodeViaReflection(writer *Writer, input any, options encodingOptions) error {
 	if e, ok := input.(Encoder); ok {
 		logrus.Debugf("encodeViaReflection: Encoding via Encoder: %t", input)
-		return e.Encode()
+		return e.Encode(writer)
 	}
 
 	myType := reflect.TypeOf(input)
 	logrus.Debugf("encodeViaReflection: Kind: %v", myType.Kind())
 	switch myType.Kind() {
 	case reflect.Pointer:
-		return encodeViaReflection(reflect.ValueOf(input).Elem().Interface(), options)
+		return encodeViaReflection(writer, reflect.ValueOf(input).Elem().Interface(), options)
 	case reflect.Struct:
 		if timeValue, ok := input.(time.Time); ok {
 			logrus.Debugf("encodeViaReflection: This is a time.Time.")
@@ -114,7 +112,7 @@ func encodeViaReflection(input any, options encodingOptions) ([]byte, error) {
 				writer.WriteDate(timeValue)
 				writer.WriteTime(timeValue)
 			default:
-				return nil, fmt.Errorf("unhandled type: %s", options.Type)
+				return fmt.Errorf("unhandled type: %s", options.Type)
 			}
 		} else {
 			myValue := reflect.ValueOf(input)
@@ -128,7 +126,7 @@ func encodeViaReflection(input any, options encodingOptions) ([]byte, error) {
 				}
 				options, err := parseOptionsFromTag(tag)
 				if err != nil {
-					return nil, err
+					return err
 				}
 				var myFieldValue reflect.Value
 				if myField.IsExported() {
@@ -136,11 +134,10 @@ func encodeViaReflection(input any, options encodingOptions) ([]byte, error) {
 				} else {
 					myFieldValue = reflect.New(myField.Type)
 				}
-				contents, err := encodeViaReflection(myFieldValue.Interface(), options)
+				err = encodeViaReflection(writer, myFieldValue.Interface(), options)
 				if err != nil {
-					return nil, err
+					return err
 				}
-				writer.WriteBytes(contents)
 			}
 		}
 	case reflect.Uint8:
@@ -164,7 +161,7 @@ func encodeViaReflection(input any, options encodingOptions) ([]byte, error) {
 				writer.WriteBytes(reflect.ValueOf(input).Bytes())
 			}
 		} else {
-			return nil, fmt.Errorf("unimplemented: encoding an array of kind %q", myType.Elem().Kind())
+			return fmt.Errorf("unimplemented: encoding an array of kind %q", myType.Elem().Kind())
 		}
 	case reflect.Slice:
 		if myType.Elem().Kind() == reflect.Uint8 {
@@ -173,19 +170,19 @@ func encodeViaReflection(input any, options encodingOptions) ([]byte, error) {
 			logrus.Debugf("encodeViaReflection: writing slice of bytes: %x", reflect.ValueOf(input).Bytes())
 			writer.WriteBytes(reflect.ValueOf(input).Bytes())
 		} else {
-			return nil, fmt.Errorf("unimplemented: encoding a slice of kind %q", myType.Elem().Kind())
+			return fmt.Errorf("unimplemented: encoding a slice of kind %q", myType.Elem().Kind())
 		}
 	default:
-		return nil, fmt.Errorf("unimplemented: kind: %v", myType.Kind())
+		return fmt.Errorf("unimplemented: kind: %v", myType.Kind())
 	}
-	return writer.Bytes(), nil
+	return nil
 }
 
 func decodeViaReflection(reader *Reader, myValue reflect.Value, options encodingOptions) error {
 	if myValue.CanInterface() {
 		if d, ok := myValue.Interface().(Decoder); ok {
 			logrus.Debugf("decodeViaReflection: Decoding via Decoder: %+v", myValue.Interface())
-			return d.Decode(reader.Bytes())
+			return d.Decode(reader)
 		}
 	}
 

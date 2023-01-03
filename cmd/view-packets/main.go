@@ -99,7 +99,7 @@ func main() {
 					data := packet.TransportLayer().LayerPayload()
 					logrus.Debugf("Data (%d): %X", len(data), data)
 
-					err = parseData(data, fromClient, controllerAddress, controllerList, personnelList)
+					err = parseData(wire.NewReader(data), fromClient, controllerAddress, controllerList, personnelList)
 					if err != nil {
 						logrus.Warnf("Could not parse data: [%T] %v", err, err)
 					}
@@ -118,7 +118,7 @@ func main() {
 	os.Exit(0)
 }
 
-func parseData(fullContents []byte, fromClient bool, controllerAddress string, controllerList cobrafile.ControllerList, personnelList cobrafile.PersonnelList) error {
+func parseData(fullContents *wire.Reader, fromClient bool, controllerAddress string, controllerList cobrafile.ControllerList, personnelList cobrafile.PersonnelList) error {
 	if fromClient {
 		logrus.Infof("Mode: Client")
 	} else {
@@ -148,14 +148,14 @@ func parseData(fullContents []byte, fromClient bool, controllerAddress string, c
 		logrus.Infof("Function: GetOperationStatus")
 		if fromClient {
 			var request wire.GetOperationStatusRequest
-			err = wire.Decode(data.Bytes(), &request)
+			err = wire.Decode(data, &request)
 			if err != nil {
 				return err
 			}
 			logrus.Infof("Request: %+v", request)
 		} else {
 			var response wire.GetOperationStatusResponse
-			err = wire.Decode(data.Bytes(), &response)
+			err = wire.Decode(data, &response)
 			if err != nil {
 				return err
 			}
@@ -189,14 +189,14 @@ func parseData(fullContents []byte, fromClient bool, controllerAddress string, c
 		logrus.Infof("Function: GetBasicInfo")
 		if fromClient {
 			var request wire.GetBasicInfoRequest
-			err = wire.Decode(data.Bytes(), &request)
+			err = wire.Decode(data, &request)
 			if err != nil {
 				return err
 			}
 			logrus.Infof("Request: %+v", request)
 		} else {
 			var response wire.GetBasicInfoResponse
-			err = wire.Decode(data.Bytes(), &response)
+			err = wire.Decode(data, &response)
 			if err != nil {
 				return err
 			}
@@ -206,14 +206,14 @@ func parseData(fullContents []byte, fromClient bool, controllerAddress string, c
 		logrus.Infof("Function: SetTime")
 		if fromClient {
 			var request wire.SetTimeRequest
-			err = wire.Decode(data.Bytes(), &request)
+			err = wire.Decode(data, &request)
 			if err != nil {
 				return err
 			}
 			logrus.Infof("Request: %+v", request)
 		} else {
 			var response wire.SetTimeResponse
-			err = wire.Decode(data.Bytes(), &response)
+			err = wire.Decode(data, &response)
 			if err != nil {
 				return err
 			}
@@ -223,14 +223,14 @@ func parseData(fullContents []byte, fromClient bool, controllerAddress string, c
 		logrus.Infof("Function: GetRecord")
 		if fromClient {
 			var request wire.GetRecordRequest
-			err = wire.Decode(data.Bytes(), &request)
+			err = wire.Decode(data, &request)
 			if err != nil {
 				return err
 			}
 			logrus.Infof("Request: %+v", request)
 		} else {
 			var response wire.GetRecordResponse
-			err = wire.Decode(data.Bytes(), &response)
+			err = wire.Decode(data, &response)
 			if err != nil {
 				return err
 			}
@@ -454,7 +454,7 @@ func parseData(fullContents []byte, fromClient bool, controllerAddress string, c
 		logrus.Infof("Function: OpenDoor")
 		if fromClient {
 			var request wire.OpenDoorRequest
-			err = wire.Decode(data.Bytes(), &request)
+			err = wire.Decode(data, &request)
 			if err != nil {
 				return err
 			}
@@ -467,7 +467,7 @@ func parseData(fullContents []byte, fromClient bool, controllerAddress string, c
 			}
 		} else {
 			var response wire.OpenDoorResponse
-			err = wire.Decode(data.Bytes(), &response)
+			err = wire.Decode(data, &response)
 			if err != nil {
 				return err
 			}
@@ -656,14 +656,14 @@ func parseData(fullContents []byte, fromClient bool, controllerAddress string, c
 		logrus.Infof("Function: GetNetworkInfo")
 		if fromClient {
 			var request wire.GetNetworkInfoRequest
-			err = wire.Decode(data.Bytes(), &request)
+			err = wire.Decode(data, &request)
 			if err != nil {
 				return err
 			}
 			logrus.Infof("Request: %+v", request)
 		} else {
 			var response wire.GetNetworkInfoResponse
-			err = wire.Decode(data.Bytes(), &response)
+			err = wire.Decode(data, &response)
 			if err != nil {
 				return err
 			}
@@ -673,7 +673,7 @@ func parseData(fullContents []byte, fromClient bool, controllerAddress string, c
 		logrus.Infof("Function: UpdatePermissions")
 		if fromClient {
 			var request wire.UpdatePermissionsRequest
-			err = wire.Decode(data.Bytes(), &request)
+			err = wire.Decode(data, &request)
 			if err != nil {
 				return err
 			}
@@ -686,7 +686,7 @@ func parseData(fullContents []byte, fromClient bool, controllerAddress string, c
 			}
 		} else {
 			var response wire.UpdatePermissionsResponse
-			err = wire.Decode(data.Bytes(), &response)
+			err = wire.Decode(data, &response)
 			if err != nil {
 				return err
 			}

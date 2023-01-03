@@ -19,8 +19,7 @@ type UpdatePermissionsRequest struct {
 	Standby   []byte
 }
 
-func (r *UpdatePermissionsRequest) Encode() ([]byte, error) {
-	writer := NewWriter()
+func (r *UpdatePermissionsRequest) Encode(writer *Writer) error {
 	writer.WriteUint16(r.Unknown1)
 	writer.WriteUint16(r.CardID)
 	writer.WriteUint8(r.Area)
@@ -30,15 +29,14 @@ func (r *UpdatePermissionsRequest) Encode() ([]byte, error) {
 	writer.WriteUint8(r.Time)
 	writer.WriteUint24(r.Password)
 	if len(r.Standby) != 4 {
-		return nil, fmt.Errorf("not enough bytes for standby: %d (expected: 4)", len(r.Standby))
+		return fmt.Errorf("not enough bytes for standby: %d (expected: 4)", len(r.Standby))
 	}
 	writer.WriteBytes(r.Standby)
-	return writer.Bytes(), nil
+	return nil
 }
 
-func (r *UpdatePermissionsRequest) Decode(b []byte) error {
+func (r *UpdatePermissionsRequest) Decode(reader *Reader) error {
 	var err error
-	reader := NewReader(b)
 	r.Unknown1, err = reader.ReadUint16()
 	if err != nil {
 		return fmt.Errorf("could not read unknown1: %w", err)
@@ -76,7 +74,7 @@ func (r *UpdatePermissionsRequest) Decode(b []byte) error {
 		return fmt.Errorf("could not read standby: %w", err)
 	}
 	if !IsAll(reader.Bytes(), 0) {
-		return fmt.Errorf("unexpected contents: %x", b)
+		return fmt.Errorf("unexpected contents: %x", reader.Bytes())
 	}
 	return nil
 }
@@ -85,15 +83,13 @@ type UpdatePermissionsResponse struct {
 	Result uint8
 }
 
-func (r *UpdatePermissionsResponse) Encode() ([]byte, error) {
-	writer := NewWriter()
+func (r *UpdatePermissionsResponse) Encode(writer *Writer) error {
 	writer.WriteUint8(r.Result)
-	return writer.Bytes(), nil
+	return nil
 }
 
-func (r *UpdatePermissionsResponse) Decode(b []byte) error {
+func (r *UpdatePermissionsResponse) Decode(reader *Reader) error {
 	var err error
-	reader := NewReader(b)
 	r.Result, err = reader.ReadUint8()
 	if err != nil {
 		return fmt.Errorf("could not read result: %w", err)

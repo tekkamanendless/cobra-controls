@@ -9,21 +9,19 @@ type GetOperationStatusRequest struct {
 	RecordIndex uint32 // 0x0 and 0xFFFFFFFF mean "latest".
 }
 
-func (r *GetOperationStatusRequest) Encode() ([]byte, error) {
-	writer := NewWriter()
+func (r *GetOperationStatusRequest) Encode(writer *Writer) error {
 	writer.WriteUint32(r.RecordIndex)
-	return writer.Bytes(), nil
+	return nil
 }
 
-func (r *GetOperationStatusRequest) Decode(b []byte) error {
-	reader := NewReader(b)
+func (r *GetOperationStatusRequest) Decode(reader *Reader) error {
 	var err error
 	r.RecordIndex, err = reader.ReadUint32()
 	if err != nil {
 		return fmt.Errorf("could not read record index: %v", err)
 	}
 	if !IsAll(reader.Bytes(), 0) {
-		return fmt.Errorf("unexpected contents: %x", b)
+		return fmt.Errorf("unexpected contents: %x", reader.Bytes())
 	}
 	return nil
 }
@@ -107,18 +105,16 @@ func (r *Record) AccessGranted() bool {
 	return (r.RecordState&0b10000000 == 0)
 }
 
-func (r Record) Encode() ([]byte, error) {
-	writer := NewWriter()
+func (r Record) Encode(writer *Writer) error {
 	writer.WriteUint16(r.IDNumber)
 	writer.WriteUint8(r.AreaNumber)
 	writer.WriteUint8(r.RecordState)
 	writer.WriteDate(r.BrushDateTime)
 	writer.WriteTime(r.BrushDateTime)
-	return writer.Bytes(), nil
+	return nil
 }
 
-func (r *Record) Decode(b []byte) error {
-	reader := NewReader(b)
+func (r *Record) Decode(reader *Reader) error {
 	var err error
 	r.IDNumber, err = reader.ReadUint16()
 	if err != nil {
@@ -142,7 +138,7 @@ func (r *Record) Decode(b []byte) error {
 	}
 	r.BrushDateTime = MergeDateTime(brushDate, brushTime)
 	if !IsAll(reader.Bytes(), 0) {
-		return fmt.Errorf("unexpected contents: %x", b)
+		return fmt.Errorf("unexpected contents: %x", reader.Bytes())
 	}
 	return nil
 }
@@ -160,8 +156,7 @@ type GetOperationStatusResponse struct {
 	Reserved3     uint8
 }
 
-func (r GetOperationStatusResponse) Encode() ([]byte, error) {
-	writer := NewWriter()
+func (r GetOperationStatusResponse) Encode(writer *Writer) error {
 	year := r.CurrentTime.Year()
 	if year > 2000 {
 		year -= 2000
@@ -182,11 +177,10 @@ func (r GetOperationStatusResponse) Encode() ([]byte, error) {
 		}
 		writer.WriteBytes(recordBytes)
 	} else {
-		recordBytes, err := r.Record.Encode()
+		err := r.Record.Encode(writer)
 		if err != nil {
-			return nil, fmt.Errorf("could not encode record: %w", err)
+			return fmt.Errorf("could not encode record: %w", err)
 		}
-		writer.WriteBytes(recordBytes)
 	}
 	writer.WriteUint8(r.RelayStatus)
 	writer.WriteUint8(r.MagnetState)
@@ -194,11 +188,10 @@ func (r GetOperationStatusResponse) Encode() ([]byte, error) {
 	writer.WriteUint8(r.FaultNumber)
 	writer.WriteUint8(r.Reserved2)
 	writer.WriteUint8(r.Reserved3)
-	return writer.Bytes(), nil
+	return nil
 }
 
-func (r *GetOperationStatusResponse) Decode(b []byte) error {
-	reader := NewReader(b)
+func (r *GetOperationStatusResponse) Decode(reader *Reader) error {
 	var err error
 	year, err := reader.ReadUint8()
 	if err != nil {
@@ -246,13 +239,13 @@ func (r *GetOperationStatusResponse) Decode(b []byte) error {
 	if err != nil {
 		return fmt.Errorf("could not read popedom amount: %w", err)
 	}
-	recordBytes, err := reader.ReadBytes(8)
+	recordReader, err := reader.Read(8)
 	if err != nil {
 		return fmt.Errorf("could not read record: %w", err)
 	}
-	if !IsAll(recordBytes, 0x00) && !IsAll(recordBytes, 0xff) {
+	if !IsAll(recordReader.Bytes(), 0x00) && !IsAll(recordReader.Bytes(), 0xff) {
 		var record Record
-		err = Decode(recordBytes, &record)
+		err = Decode(recordReader, &record)
 		if err != nil {
 			return fmt.Errorf("could not parse record: %w", err)
 		}
@@ -283,7 +276,7 @@ func (r *GetOperationStatusResponse) Decode(b []byte) error {
 		return fmt.Errorf("could not read reserved 4: %w", err)
 	}
 	if !IsAll(reader.Bytes(), 0) {
-		return fmt.Errorf("unexpected contents: %x", b)
+		return fmt.Errorf("unexpected contents: %x", reader.Bytes())
 	}
 
 	return nil

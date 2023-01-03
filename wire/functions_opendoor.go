@@ -11,16 +11,14 @@ type OpenDoorRequest struct {
 	Unkonwn1 uint8
 }
 
-func (r OpenDoorRequest) Encode() ([]byte, error) {
-	writer := NewWriter()
+func (r OpenDoorRequest) Encode(writer *Writer) error {
 	writer.WriteUint8(r.Door)
 	writer.WriteUint8(r.Unkonwn1)
-	return writer.Bytes(), nil
+	return nil
 }
 
-func (r *OpenDoorRequest) Decode(b []byte) error {
+func (r *OpenDoorRequest) Decode(reader *Reader) error {
 	var err error
-	reader := NewReader(b)
 	r.Door, err = reader.ReadUint8()
 	if err != nil {
 		return fmt.Errorf("could not read door: %w", err)
@@ -30,7 +28,7 @@ func (r *OpenDoorRequest) Decode(b []byte) error {
 		return fmt.Errorf("could not read unknown1: %w", err)
 	}
 	if !IsAll(reader.Bytes(), 0) {
-		return fmt.Errorf("unexpected contents: %x", b)
+		return fmt.Errorf("unexpected contents: %x", reader.Bytes())
 	}
 	return nil
 }
@@ -38,13 +36,11 @@ func (r *OpenDoorRequest) Decode(b []byte) error {
 type OpenDoorResponse struct {
 }
 
-func (r OpenDoorResponse) Encode() ([]byte, error) {
-	writer := NewWriter()
-	return writer.Bytes(), nil
+func (r OpenDoorResponse) Encode(writer *Writer) error {
+	return nil
 }
 
-func (r *OpenDoorResponse) Decode(b []byte) error {
-	reader := NewReader(b)
+func (r *OpenDoorResponse) Decode(reader *Reader) error {
 	if !IsAll(reader.Bytes(), 0) {
 		logrus.Warnf("unexpected contents: %x", reader.Bytes())
 	}
