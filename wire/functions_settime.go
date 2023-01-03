@@ -7,6 +7,7 @@ import (
 
 type SetTimeRequest struct {
 	CurrentTime time.Time // This is the new time.
+	_           [0]byte   `wire:"length:*"` // Fail if there are any leftover bytes.
 }
 
 func (r SetTimeRequest) Encode(writer *Writer) error {
@@ -82,6 +83,7 @@ type SetTimeResponse struct {
 	FaultNumber   uint8
 	Reserved2     uint8
 	Reserved3     uint8
+	_             [0]byte `wire:"length:*"` // Fail if there are any leftover bytes.
 }
 
 func (r SetTimeResponse) Encode(writer *Writer) error {

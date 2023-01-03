@@ -9,7 +9,7 @@ type GetOperationStatusRequest struct {
 	RecordIndex uint32 // 0x0 and 0xFFFFFFFF mean "latest".
 }
 
-func (r *GetOperationStatusRequest) Encode(writer *Writer) error {
+func (r GetOperationStatusRequest) Encode(writer *Writer) error {
 	writer.WriteUint32(r.RecordIndex)
 	return nil
 }

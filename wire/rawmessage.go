@@ -3,8 +3,8 @@ package wire
 // RawMessage is a byte array that will be encoded and decoded as such.
 type RawMessage []byte
 
-func (r *RawMessage) Encode(writer *Writer) error {
-	writer.WriteBytes(*r)
+func (r RawMessage) Encode(writer *Writer) error {
+	writer.WriteBytes(r)
 	return nil
 }
 

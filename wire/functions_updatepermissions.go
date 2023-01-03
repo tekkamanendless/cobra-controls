@@ -17,9 +17,10 @@ type UpdatePermissionsRequest struct {
 	Time      uint8  // TODO: WHAT IS THIS
 	Password  uint32 // 24-bit password
 	Standby   []byte
+	_         [0]byte `wire:"length:*"` // Fail if there are any leftover bytes.
 }
 
-func (r *UpdatePermissionsRequest) Encode(writer *Writer) error {
+func (r UpdatePermissionsRequest) Encode(writer *Writer) error {
 	writer.WriteUint16(r.Unknown1)
 	writer.WriteUint16(r.CardID)
 	writer.WriteUint8(r.Area)
@@ -81,9 +82,10 @@ func (r *UpdatePermissionsRequest) Decode(reader *Reader) error {
 
 type UpdatePermissionsResponse struct {
 	Result uint8
+	_      [0]byte `wire:"length:*"` // Fail if there are any leftover bytes.
 }
 
-func (r *UpdatePermissionsResponse) Encode(writer *Writer) error {
+func (r UpdatePermissionsResponse) Encode(writer *Writer) error {
 	writer.WriteUint8(r.Result)
 	return nil
 }
