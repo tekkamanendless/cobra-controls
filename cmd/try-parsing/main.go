@@ -27,43 +27,67 @@ func main() {
 		logrus.Infof("Read Uint8.")
 		for d := 0; d < len(data); d++ {
 			reader := wire.NewReader(data[d:])
-			value, _ := reader.ReadUint8()
-			logrus.Infof("   %2d: %3d (0x%2x)", d, value, value)
+			value, err := reader.ReadUint8()
+			if err != nil {
+				logrus.Infof("   %2d: n/a", d)
+			} else {
+				logrus.Infof("   %2d: %3d (0x%2x)", d, value, value)
+			}
 		}
 
 		logrus.Infof("Read Uint16.")
 		for d := 0; d < len(data); d++ {
 			reader := wire.NewReader(data[d:])
-			value, _ := reader.ReadUint16()
-			logrus.Infof("   %2d: %5d (0x%4x)", d, value, value)
+			value, err := reader.ReadUint16()
+			if err != nil {
+				logrus.Infof("   %2d: n/a", d)
+			} else {
+				logrus.Infof("   %2d: %5d (0x%4x)", d, value, value)
+			}
 		}
 
 		logrus.Infof("Read Uint24.")
 		for d := 0; d < len(data); d++ {
 			reader := wire.NewReader(data[d:])
-			value, _ := reader.ReadUint24()
-			logrus.Infof("   %2d: %8d (0x%6x)", d, value, value)
+			value, err := reader.ReadUint24()
+			if err != nil {
+				logrus.Infof("   %2d: n/a", d)
+			} else {
+				logrus.Infof("   %2d: %8d (0x%6x)", d, value, value)
+			}
 		}
 
 		logrus.Infof("Read Uint32.")
 		for d := 0; d < len(data); d++ {
 			reader := wire.NewReader(data[d:])
-			value, _ := reader.ReadUint32()
-			logrus.Infof("   %2d: %11d (0x%8x)", d, value, value)
+			value, err := reader.ReadUint32()
+			if err != nil {
+				logrus.Infof("   %2d: n/a", d)
+			} else {
+				logrus.Infof("   %2d: %11d (0x%8x)", d, value, value)
+			}
 		}
 
 		logrus.Infof("Read date.")
 		for d := 0; d < len(data); d++ {
 			reader := wire.NewReader(data[d:])
-			value, _ := reader.ReadDate()
-			logrus.Infof("   %2d: %v", d, value)
+			value, err := reader.ReadDate()
+			if err != nil {
+				logrus.Infof("   %2d: n/a", d)
+			} else {
+				logrus.Infof("   %2d: %v", d, value)
+			}
 		}
 
 		logrus.Infof("Read time.")
 		for d := 0; d < len(data); d++ {
 			reader := wire.NewReader(data[d:])
-			value, _ := reader.ReadTime()
-			logrus.Infof("   %2d: %v", d, value)
+			value, err := reader.ReadTime()
+			if err != nil {
+				logrus.Infof("   %2d: n/a", d)
+			} else {
+				logrus.Infof("   %2d: %v", d, value)
+			}
 		}
 	}
 }

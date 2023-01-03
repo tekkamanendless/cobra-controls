@@ -98,6 +98,16 @@ func (r *Reader) ReadTime() (time.Time, error) {
 	minutes := (value & 0b0000011111100000) >> 5
 	seconds := (value & 0b0000000000011111) >> 0
 
+	if hours >= 24 {
+		return time.Time{}, fmt.Errorf("invalid hour: %d", hours)
+	}
+	if minutes >= 60 {
+		return time.Time{}, fmt.Errorf("invalid minute: %d", minutes)
+	}
+	if seconds >= 60 {
+		return time.Time{}, fmt.Errorf("invalid second: %d", seconds)
+	}
+
 	output := time.Date(0, time.January, 1, int(hours), int(minutes), int(seconds)*2, 0, time.UTC)
 	return output, nil
 }
