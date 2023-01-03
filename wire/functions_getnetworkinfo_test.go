@@ -1,23 +1,12 @@
 package wire
 
 import (
-	"fmt"
 	"net"
-	"reflect"
 	"testing"
-
-	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/require"
-	"gotest.tools/assert"
 )
 
 func TestGetNetworkInfo(t *testing.T) {
-	logrus.SetLevel(logrus.DebugLevel)
-	rows := []struct {
-		input  string
-		output any
-		fail   bool
-	}{
+	rows := []EncodeDecodeTest{
 		{
 			input: "0100000000000000000000000000000000000000000000000000",
 			output: GetNetworkInfoRequest{
@@ -40,40 +29,5 @@ func TestGetNetworkInfo(t *testing.T) {
 			},
 		},
 	}
-	for rowIndex, row := range rows {
-		t.Run(fmt.Sprintf("%d", rowIndex), func(t *testing.T) {
-			t.Run(fmt.Sprintf("%T", row.output), func(t *testing.T) {
-				t.Run("Decode", func(t *testing.T) {
-					var input []byte
-					fmt.Sscanf(row.input, "%X", &input)
-					require.Equal(t, row.input, fmt.Sprintf("%X", input))
-
-					newValue := reflect.New(reflect.TypeOf(row.output))
-					err := Decode(input, newValue.Interface())
-					if row.fail {
-						require.NotNil(t, err)
-						return
-					}
-					require.Nil(t, err)
-					assert.DeepEqual(t, row.output, newValue.Elem().Interface())
-				})
-				t.Run("Encode", func(t *testing.T) {
-					if row.fail {
-						return
-					}
-
-					var input []byte
-					fmt.Sscanf(row.input, "%X", &input)
-					require.Equal(t, row.input, fmt.Sprintf("%X", input))
-
-					output, err := Encode(row.output)
-					require.Nil(t, err)
-					for len(output) < len(input) {
-						output = append(output, 0x00)
-					}
-					assert.DeepEqual(t, input, output)
-				})
-			})
-		})
-	}
+	runEncodeDecodeTests(t, rows)
 }

@@ -3,6 +3,8 @@ package wire
 import (
 	"bytes"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 type Writer struct {
@@ -69,6 +71,7 @@ func (w *Writer) WriteDate(value time.Time) {
 	day := uint16(value.Day())
 
 	output := ((year & 0b1111111) << 9) | ((month & 0b1111) << 5) | ((day & 0b11111) << 0)
+	logrus.Debugf("WriteDate: (%d, %d, %d) :: (%b, %b, %b) :: %b (%d) 0x%x", year, month, day, year, month, day, output, output, output)
 	w.WriteUint16(output)
 }
 

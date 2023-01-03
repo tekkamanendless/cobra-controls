@@ -3,8 +3,6 @@ package wire
 import (
 	"fmt"
 	"time"
-
-	"github.com/sirupsen/logrus"
 )
 
 type GetBasicInfoRequest struct{}
@@ -22,31 +20,45 @@ func (r *GetBasicInfoRequest) Decode(b []byte) error {
 
 type GetBasicInfoResponse struct {
 	IssueDate time.Time
-	Unknown1  uint8
 	Version   uint8
 	Model     uint8
+	Unknown2  []byte
 }
 
 func (r GetBasicInfoResponse) Encode() ([]byte, error) {
 	writer := NewWriter()
-	writer.WriteDate(r.IssueDate)
-	writer.WriteUint8(r.Unknown1)
+	year := r.IssueDate.Year()
+	if year > 2000 {
+		year -= 2000
+	}
+	writer.WriteUint8(InsaneBase10ToBase16(uint8(year)))
+	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.IssueDate.Month())))
+	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.IssueDate.Day())))
 	writer.WriteUint8(r.Version)
 	writer.WriteUint8(r.Model)
+	writer.WriteBytes(r.Unknown2)
 	return writer.Bytes(), nil
 }
 
 func (r *GetBasicInfoResponse) Decode(b []byte) error {
 	var err error
 	reader := NewReader(b)
-	r.IssueDate, err = reader.ReadDate()
+	year, err := reader.ReadUint8()
 	if err != nil {
-		return fmt.Errorf("could not read issue date: %w", err)
+		return fmt.Errorf("could not read year: %w", err)
 	}
-	r.Unknown1, err = reader.ReadUint8()
+	year = InsaneBase16ToBase10(year)
+	month, err := reader.ReadUint8()
 	if err != nil {
-		return fmt.Errorf("could not read unknown1: %w", err)
+		return fmt.Errorf("could not read month: %w", err)
 	}
+	month = InsaneBase16ToBase10(month)
+	day, err := reader.ReadUint8()
+	if err != nil {
+		return fmt.Errorf("could not read day: %w", err)
+	}
+	day = InsaneBase16ToBase10(day)
+	r.IssueDate = time.Date(2000+int(year), time.Month(month), int(day), 0, 0, 0, 0, time.UTC)
 	r.Version, err = reader.ReadUint8()
 	if err != nil {
 		return fmt.Errorf("could not read version: %w", err)
@@ -55,8 +67,9 @@ func (r *GetBasicInfoResponse) Decode(b []byte) error {
 	if err != nil {
 		return fmt.Errorf("could not read model: %w", err)
 	}
-	if !IsAll(reader.Bytes(), 0) {
-		logrus.Warnf("unexpected contents: %x", reader.Bytes())
+	r.Unknown2, err = reader.ReadBytes(reader.Length())
+	if err != nil {
+		return fmt.Errorf("could not read unknown2: %w", err)
 	}
 	return nil
 }
