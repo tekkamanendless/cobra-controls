@@ -11,10 +11,13 @@ import (
 )
 
 const (
-	TypeUint24   = "uint24"
-	TypeDate     = "date"
-	TypeTime     = "time"
-	TypeDateTime = "datetime"
+	TypeUint24      = "uint24"
+	TypeDate        = "date"
+	TypeTime        = "time"
+	TypeDateTime    = "datetime"
+	TypeHexDate     = "hexdate"
+	TypeHexTime     = "hextime"
+	TypeHexDateTime = "hexdatetime"
 )
 
 // Encoder can encode an object.
@@ -74,7 +77,7 @@ func parseOptionsFromTag(tag string) (encodingOptions, error) {
 			}
 		case "type":
 			switch value {
-			case TypeDate, TypeDateTime, TypeTime, TypeUint24:
+			case TypeDate, TypeDateTime, TypeHexDate, TypeHexDateTime, TypeHexTime, TypeTime, TypeUint24:
 				// This is valid.
 			default:
 				return options, fmt.Errorf("invalid type: %q", value)
@@ -117,6 +120,22 @@ func encodeViaReflection(writer *Writer, input any, options encodingOptions) err
 			case TypeDateTime:
 				writer.WriteDate(timeValue)
 				writer.WriteTime(timeValue)
+			case TypeHexDate:
+				writer.WriteUint8(InsaneBase10ToBase16(uint8(timeValue.Year() - 2000)))
+				writer.WriteUint8(InsaneBase10ToBase16(uint8(timeValue.Month())))
+				writer.WriteUint8(InsaneBase10ToBase16(uint8(timeValue.Day())))
+			case TypeHexTime:
+				writer.WriteUint8(InsaneBase10ToBase16(uint8(timeValue.Hour())))
+				writer.WriteUint8(InsaneBase10ToBase16(uint8(timeValue.Minute())))
+				writer.WriteUint8(InsaneBase10ToBase16(uint8(timeValue.Second())))
+			case TypeHexDateTime:
+				writer.WriteUint8(InsaneBase10ToBase16(uint8(timeValue.Year() - 2000)))
+				writer.WriteUint8(InsaneBase10ToBase16(uint8(timeValue.Month())))
+				writer.WriteUint8(InsaneBase10ToBase16(uint8(timeValue.Day())))
+				writer.WriteUint8(InsaneBase10ToBase16(uint8(timeValue.Weekday())))
+				writer.WriteUint8(InsaneBase10ToBase16(uint8(timeValue.Hour())))
+				writer.WriteUint8(InsaneBase10ToBase16(uint8(timeValue.Minute())))
+				writer.WriteUint8(InsaneBase10ToBase16(uint8(timeValue.Second())))
 			default:
 				return fmt.Errorf(fieldPrefix+"unhandled type: %s", options.Type)
 			}
@@ -247,6 +266,98 @@ func decodeViaReflection(reader *Reader, myValue reflect.Value, options encoding
 					myValue.Set(reflect.ValueOf(v))
 				} else {
 					return fmt.Errorf(fieldPrefix+"could not set datetime: %w", err)
+				}
+			case TypeHexDate:
+				year, err := reader.ReadUint8()
+				if err != nil {
+					return fmt.Errorf(fieldPrefix+"could not read year: %w", err)
+				}
+				year = InsaneBase16ToBase10(year)
+				month, err := reader.ReadUint8()
+				if err != nil {
+					return fmt.Errorf(fieldPrefix+"could not read month: %w", err)
+				}
+				month = InsaneBase16ToBase10(month)
+				day, err := reader.ReadUint8()
+				if err != nil {
+					return fmt.Errorf(fieldPrefix+"could not read day: %w", err)
+				}
+				day = InsaneBase16ToBase10(day)
+
+				v := time.Date(int(year)+2000, time.Month(month), int(day), 0, 0, 0, 0, time.UTC)
+				if myValue.CanSet() {
+					myValue.Set(reflect.ValueOf(v))
+				} else {
+					return fmt.Errorf(fieldPrefix+"could not set date: %w", err)
+				}
+			case TypeHexDateTime:
+				year, err := reader.ReadUint8()
+				if err != nil {
+					return fmt.Errorf(fieldPrefix+"could not read year: %w", err)
+				}
+				year = InsaneBase16ToBase10(year)
+				month, err := reader.ReadUint8()
+				if err != nil {
+					return fmt.Errorf(fieldPrefix+"could not read month: %w", err)
+				}
+				month = InsaneBase16ToBase10(month)
+				day, err := reader.ReadUint8()
+				if err != nil {
+					return fmt.Errorf(fieldPrefix+"could not read day: %w", err)
+				}
+				day = InsaneBase16ToBase10(day)
+
+				weekday, err := reader.ReadUint8()
+				if err != nil {
+					return fmt.Errorf(fieldPrefix+"could not read weekday: %w", err)
+				}
+				weekday = InsaneBase16ToBase10(weekday)
+				_ = weekday
+
+				hour, err := reader.ReadUint8()
+				if err != nil {
+					return fmt.Errorf(fieldPrefix+"could not read hour: %w", err)
+				}
+				hour = InsaneBase16ToBase10(hour)
+				minute, err := reader.ReadUint8()
+				if err != nil {
+					return fmt.Errorf(fieldPrefix+"could not read minute: %w", err)
+				}
+				minute = InsaneBase16ToBase10(minute)
+				second, err := reader.ReadUint8()
+				if err != nil {
+					return fmt.Errorf(fieldPrefix+"could not read second: %w", err)
+				}
+				second = InsaneBase16ToBase10(second)
+
+				v := time.Date(int(year)+2000, time.Month(month), int(day), int(hour), int(minute), int(second), 0, time.UTC)
+				if myValue.CanSet() {
+					myValue.Set(reflect.ValueOf(v))
+				} else {
+					return fmt.Errorf(fieldPrefix+"could not set date: %w", err)
+				}
+			case TypeHexTime:
+				hour, err := reader.ReadUint8()
+				if err != nil {
+					return fmt.Errorf(fieldPrefix+"could not read hour: %w", err)
+				}
+				hour = InsaneBase16ToBase10(hour)
+				minute, err := reader.ReadUint8()
+				if err != nil {
+					return fmt.Errorf(fieldPrefix+"could not read minute: %w", err)
+				}
+				minute = InsaneBase16ToBase10(minute)
+				second, err := reader.ReadUint8()
+				if err != nil {
+					return fmt.Errorf(fieldPrefix+"could not read second: %w", err)
+				}
+				second = InsaneBase16ToBase10(second)
+
+				v := time.Date(0, time.January, 1, int(hour), int(minute), int(second), 0, time.UTC)
+				if myValue.CanSet() {
+					myValue.Set(reflect.ValueOf(v))
+				} else {
+					return fmt.Errorf(fieldPrefix+"could not set date: %w", err)
 				}
 			default:
 				return fmt.Errorf(fieldPrefix+"unhandled type: %s", options.Type)

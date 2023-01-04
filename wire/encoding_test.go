@@ -103,7 +103,72 @@ func TestEncoding(t *testing.T) {
 			})
 		})
 		t.Run("Hex", func(t *testing.T) {
+			t.Run("datetime", func(t *testing.T) {
+				type MyStruct struct {
+					Time1 time.Time `wire:"type:hexdatetime"`
+				}
 
+				t.Run("Decode", func(t *testing.T) {
+					input := []byte{0x06, 0x01, 0x02, 0x01, 0x15, 0x04, 0x05}
+					var output MyStruct
+					err := Decode(NewReader(input), &output)
+					require.Nil(t, err)
+					require.Equal(t, time.Date(2006, 01, 02, 15, 4, 5, 0, time.UTC), output.Time1)
+				})
+				t.Run("Encode", func(t *testing.T) {
+					input := MyStruct{
+						Time1: time.Date(2006, 01, 02, 15, 4, 5, 0, time.UTC),
+					}
+					writer := NewWriter()
+					err := Encode(writer, input)
+					require.Nil(t, err)
+					require.Equal(t, []byte{0x06, 0x01, 0x02, 0x01, 0x15, 0x04, 0x05}, writer.Bytes())
+				})
+			})
+			t.Run("date", func(t *testing.T) {
+				type MyStruct struct {
+					Time1 time.Time `wire:"type:hexdate"`
+				}
+
+				t.Run("Decode", func(t *testing.T) {
+					input := []byte{0x06, 0x01, 0x02}
+					var output MyStruct
+					err := Decode(NewReader(input), &output)
+					require.Nil(t, err)
+					require.Equal(t, time.Date(2006, 01, 02, 0, 0, 0, 0, time.UTC), output.Time1)
+				})
+				t.Run("Encode", func(t *testing.T) {
+					input := MyStruct{
+						Time1: time.Date(2006, 01, 02, 15, 4, 6, 0, time.UTC),
+					}
+					writer := NewWriter()
+					err := Encode(writer, input)
+					require.Nil(t, err)
+					require.Equal(t, []byte{0x06, 0x01, 0x02}, writer.Bytes())
+				})
+			})
+			t.Run("time", func(t *testing.T) {
+				type MyStruct struct {
+					Time1 time.Time `wire:"type:hextime"`
+				}
+
+				t.Run("Decode", func(t *testing.T) {
+					input := []byte{0x15, 0x04, 0x05}
+					var output MyStruct
+					err := Decode(NewReader(input), &output)
+					require.Nil(t, err)
+					require.Equal(t, time.Date(0, 01, 01, 15, 4, 5, 0, time.UTC), output.Time1)
+				})
+				t.Run("Encode", func(t *testing.T) {
+					input := MyStruct{
+						Time1: time.Date(2006, 01, 02, 15, 4, 5, 0, time.UTC),
+					}
+					writer := NewWriter()
+					err := Encode(writer, input)
+					require.Nil(t, err)
+					require.Equal(t, []byte{0x15, 0x04, 0x05}, writer.Bytes())
+				})
+			})
 		})
 	})
 }
