@@ -1,29 +1,12 @@
 package wire
 
 import (
-	"fmt"
 	"time"
 )
 
 type GetOperationStatusRequest struct {
-	RecordIndex uint32 // 0x0 and 0xFFFFFFFF mean "latest".
-}
-
-func (r GetOperationStatusRequest) Encode(writer *Writer) error {
-	writer.WriteUint32(r.RecordIndex)
-	return nil
-}
-
-func (r *GetOperationStatusRequest) Decode(reader *Reader) error {
-	var err error
-	r.RecordIndex, err = reader.ReadUint32()
-	if err != nil {
-		return fmt.Errorf("could not read record index: %v", err)
-	}
-	if !IsAll(reader.Bytes(), 0) {
-		return fmt.Errorf("unexpected contents: %x", reader.Bytes())
-	}
-	return nil
+	RecordIndex uint32  // 0x0 and 0xFFFFFFFF mean "latest".
+	_           [0]byte `wire:"length:*"` // Fail if there are any leftover bytes.
 }
 
 // TODO: RecordState
@@ -108,7 +91,7 @@ func (r Record) AccessGranted() bool {
 
 type GetOperationStatusResponse struct {
 	CurrentTime   time.Time `wire:"type:hexdatetime"`
-	RecordCount   uint32    // This is the number of access records available.
+	RecordCount   uint32    `wire:"type:uint24"` // This is the number of access records available.
 	PopedomAmount uint16    // TODO: Is the number of fobs registered on the door?
 	Record        *Record   `wire:"length:8,null:0xff"` // This is the access record for the index requested.
 	RelayStatus   uint8
@@ -117,130 +100,5 @@ type GetOperationStatusResponse struct {
 	FaultNumber   uint8
 	Reserved2     uint8
 	Reserved3     uint8
-}
-
-func (r GetOperationStatusResponse) Encode(writer *Writer) error {
-	year := r.CurrentTime.Year()
-	if year > 2000 {
-		year -= 2000
-	}
-	writer.WriteUint8(InsaneBase10ToBase16(uint8(year)))
-	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Month())))
-	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Day())))
-	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Weekday())))
-	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Hour())))
-	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Minute())))
-	writer.WriteUint8(InsaneBase10ToBase16(uint8(r.CurrentTime.Second())))
-	writer.WriteUint24(r.RecordCount)
-	writer.WriteUint16(r.PopedomAmount)
-	if r.Record == nil {
-		recordBytes := make([]byte, 8)
-		for b := range recordBytes {
-			recordBytes[b] = 0xff
-		}
-		writer.WriteBytes(recordBytes)
-	} else {
-		err := Encode(writer, r.Record)
-		if err != nil {
-			return fmt.Errorf("could not encode record: %w", err)
-		}
-	}
-	writer.WriteUint8(r.RelayStatus)
-	writer.WriteUint8(r.MagnetState)
-	writer.WriteUint8(r.Reserved1)
-	writer.WriteUint8(r.FaultNumber)
-	writer.WriteUint8(r.Reserved2)
-	writer.WriteUint8(r.Reserved3)
-	return nil
-}
-
-func (r *GetOperationStatusResponse) Decode(reader *Reader) error {
-	var err error
-	year, err := reader.ReadUint8()
-	if err != nil {
-		return fmt.Errorf("could not read year: %w", err)
-	}
-	year = InsaneBase16ToBase10(year)
-	month, err := reader.ReadUint8()
-	if err != nil {
-		return fmt.Errorf("could not read month: %w", err)
-	}
-	month = InsaneBase16ToBase10(month)
-	day, err := reader.ReadUint8()
-	if err != nil {
-		return fmt.Errorf("could not read day: %w", err)
-	}
-	day = InsaneBase16ToBase10(day)
-	week, err := reader.ReadUint8()
-	if err != nil {
-		return fmt.Errorf("could not read week: %w", err)
-	}
-	week = InsaneBase16ToBase10(week)
-	hour, err := reader.ReadUint8()
-	if err != nil {
-		return fmt.Errorf("could not read hour: %w", err)
-	}
-	hour = InsaneBase16ToBase10(hour)
-	minute, err := reader.ReadUint8()
-	if err != nil {
-		return fmt.Errorf("could not read minute: %w", err)
-	}
-	minute = InsaneBase16ToBase10(minute)
-	second, err := reader.ReadUint8()
-	if err != nil {
-		return fmt.Errorf("could not read second: %w", err)
-	}
-	second = InsaneBase16ToBase10(second)
-	r.CurrentTime = time.Date(2000+int(year), time.Month(month), int(day), int(hour), int(minute), int(second), 0, time.UTC)
-	_ = week
-
-	r.RecordCount, err = reader.ReadUint24()
-	if err != nil {
-		return fmt.Errorf("could not read card record: %w", err)
-	}
-	r.PopedomAmount, err = reader.ReadUint16()
-	if err != nil {
-		return fmt.Errorf("could not read popedom amount: %w", err)
-	}
-	recordReader, err := reader.Read(8)
-	if err != nil {
-		return fmt.Errorf("could not read record: %w", err)
-	}
-	if !IsAll(recordReader.Bytes(), 0x00) && !IsAll(recordReader.Bytes(), 0xff) {
-		var record Record
-		err = Decode(recordReader, &record)
-		if err != nil {
-			return fmt.Errorf("could not parse record: %w", err)
-		}
-		r.Record = &record
-	}
-	r.RelayStatus, err = reader.ReadUint8()
-	if err != nil {
-		return fmt.Errorf("could not read relay status: %w", err)
-	}
-	r.MagnetState, err = reader.ReadUint8()
-	if err != nil {
-		return fmt.Errorf("could not read door magnet button state: %w", err)
-	}
-	r.Reserved1, err = reader.ReadUint8()
-	if err != nil {
-		return fmt.Errorf("could not read reserved 1: %w", err)
-	}
-	r.FaultNumber, err = reader.ReadUint8()
-	if err != nil {
-		return fmt.Errorf("could not read reserved 2: %w", err)
-	}
-	r.Reserved2, err = reader.ReadUint8()
-	if err != nil {
-		return fmt.Errorf("could not read reserved 3: %w", err)
-	}
-	r.Reserved3, err = reader.ReadUint8()
-	if err != nil {
-		return fmt.Errorf("could not read reserved 4: %w", err)
-	}
-	if !IsAll(reader.Bytes(), 0) {
-		return fmt.Errorf("unexpected contents: %x", reader.Bytes())
-	}
-
-	return nil
+	_             [0]byte `wire:"length:*"` // Fail if there are any leftover bytes.
 }

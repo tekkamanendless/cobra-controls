@@ -3,8 +3,6 @@ package wire
 import (
 	"fmt"
 	"reflect"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -41,55 +39,6 @@ func Decode(reader *Reader, v any) error {
 	return decodeViaReflection(reader, reflect.ValueOf(v), encodingOptions{})
 }
 
-// encodingOptions represents the options encoded in the "wire" field tag.
-// type:{date,datetime,date,uint24}
-// length:{*,[0-9]+}
-type encodingOptions struct {
-	Name   string // This is primarily passed in to help with rendering a meaningful error message.
-	Type   string
-	Length int // -1 for "read everything until the end"
-}
-
-// parseOptionsFromTag parses the "wire" tag and returns the "encodingOptions" for it.
-func parseOptionsFromTag(tag string) (encodingOptions, error) {
-	options := encodingOptions{}
-	if tag == "" {
-		return options, nil
-	}
-	items := strings.Split(tag, ",")
-	for _, item := range items {
-		parts := strings.SplitN(item, ":", 2)
-		if len(parts) != 2 {
-			return options, fmt.Errorf("invalid option: %q", item)
-		}
-		key := parts[0]
-		value := parts[1]
-		switch key {
-		case "length":
-			if value == "*" {
-				options.Length = -1
-			} else {
-				v, err := strconv.ParseInt(value, 10, 32)
-				if err != nil {
-					return options, fmt.Errorf("invalid length: %q: %w", value, err)
-				}
-				options.Length = int(v)
-			}
-		case "type":
-			switch value {
-			case TypeDate, TypeDateTime, TypeHexDate, TypeHexDateTime, TypeHexTime, TypeTime, TypeUint24:
-				// This is valid.
-			default:
-				return options, fmt.Errorf("invalid type: %q", value)
-			}
-			options.Type = value
-		default:
-			return options, fmt.Errorf("invalid key: %q", key)
-		}
-	}
-	return options, nil
-}
-
 func encodeViaReflection(writer *Writer, input any, options encodingOptions) error {
 	if e, ok := input.(Encoder); ok {
 		logrus.Debugf("encodeViaReflection: Encoding via Encoder: %t", input)
@@ -105,7 +54,27 @@ func encodeViaReflection(writer *Writer, input any, options encodingOptions) err
 	logrus.Debugf("encodeViaReflection: Kind: %v", myType.Kind())
 	switch myType.Kind() {
 	case reflect.Pointer:
-		return encodeViaReflection(writer, reflect.ValueOf(input).Elem().Interface(), options)
+		logrus.Debugf("encodeViaReflection: input: %+v", input)
+		if reflect.ValueOf(input).IsNil() {
+			logrus.Debugf("encodeViaReflection: input is nil.")
+			switch myType.Elem().Kind() {
+			case reflect.Struct:
+				if options.Length > 0 {
+					if options.Null != nil {
+						logrus.Debugf("encodeViaReflection: writing %d bytes of 0x%x.", options.Length, *options.Null)
+						for i := 0; i < options.Length; i++ {
+							writer.WriteUint8(*options.Null)
+						}
+					}
+				}
+				return nil
+			default:
+				return fmt.Errorf(fieldPrefix+"unhandled pointer type: %+v", myType.Elem().Kind())
+			}
+		} else {
+			logrus.Debugf("encodeViaReflection: input is not nil.")
+			return encodeViaReflection(writer, reflect.ValueOf(input).Elem().Interface(), options)
+		}
 	case reflect.Struct:
 		if timeValue, ok := input.(time.Time); ok {
 			logrus.Debugf("encodeViaReflection: This is a time.Time.")
@@ -205,7 +174,10 @@ func encodeViaReflection(writer *Writer, input any, options encodingOptions) err
 }
 
 func decodeViaReflection(reader *Reader, myValue reflect.Value, options encodingOptions) error {
-	if myValue.CanInterface() {
+	logrus.Debugf("decodeViaReflection: myValue: %+v", myValue)
+	logrus.Debugf("decodeViaReflection: options: %+v", options)
+
+	if myValue != reflect.ValueOf(nil) && myValue.CanInterface() {
 		if d, ok := myValue.Interface().(Decoder); ok {
 			logrus.Debugf("decodeViaReflection: Decoding via Decoder: %+v", myValue.Interface())
 			return d.Decode(reader)
@@ -218,13 +190,41 @@ func decodeViaReflection(reader *Reader, myValue reflect.Value, options encoding
 	}
 
 	myType := myValue.Type()
-	logrus.Debugf("decodeViaReflection: myValue: %+v", myValue)
+	logrus.Debugf("decodeViaReflection: myType: %+v", myType)
 	logrus.Debugf("decodeViaReflection: myType.Kind: %+v", myType.Kind())
-	logrus.Debugf("decodeViaReflection: options: %+v", options)
 
 	switch myType.Kind() {
 	case reflect.Pointer:
-		return decodeViaReflection(reader, myValue.Elem(), options)
+		logrus.Debugf("decodeViaReflection: myType.Elem.Kind: %+v", myType.Elem().Kind())
+		if myValue.IsNil() {
+			switch myType.Elem().Kind() {
+			case reflect.Struct:
+				if options.Length > 0 {
+					logrus.Debugf("decodeViaReflection: reading %d bytes.", options.Length)
+					subReader, err := reader.Read(options.Length)
+					if err != nil {
+						return fmt.Errorf(fieldPrefix+"could not read sub structure: %w", err)
+					}
+					logrus.Debugf("decodeViaReflection: read (%d): %x", subReader.Length(), subReader.Bytes())
+					if options.Null != nil && IsAll(subReader.Bytes(), *options.Null) {
+						// Leave this as null.
+						return nil
+					}
+					newValue := reflect.New(myType.Elem())
+					err = decodeViaReflection(subReader, newValue, options)
+					if err != nil {
+						return fmt.Errorf(fieldPrefix+"could not decode sub structure: %w", err)
+					}
+					logrus.Debugf("decodeViaReflection: newValue %+vx", newValue)
+					myValue.Set(newValue)
+				}
+				return nil
+			default:
+				return fmt.Errorf(fieldPrefix+"unhandled pointer type: %+v", myType.Elem().Kind())
+			}
+		} else {
+			return decodeViaReflection(reader, myValue.Elem(), options)
+		}
 	case reflect.Struct:
 		if _, ok := myValue.Interface().(time.Time); ok {
 			logrus.Debugf("decodeViaReflection: This is a time.Time.")

@@ -171,4 +171,35 @@ func TestEncoding(t *testing.T) {
 			})
 		})
 	})
+	t.Run("Options", func(t *testing.T) {
+		t.Run("Length has to be an integer", func(t *testing.T) {
+			t.Run("3.5", func(t *testing.T) {
+				type MyStruct struct {
+					Key1 []byte `wire:"length:3.5"`
+				}
+				input := MyStruct{}
+				writer := NewWriter()
+				err := Encode(writer, input)
+				require.NotNil(t, err)
+			})
+			t.Run("empty", func(t *testing.T) {
+				type MyStruct struct {
+					Key1 []byte `wire:"length:"`
+				}
+				input := MyStruct{}
+				writer := NewWriter()
+				err := Encode(writer, input)
+				require.NotNil(t, err)
+			})
+			t.Run("BOGUS", func(t *testing.T) {
+				type MyStruct struct {
+					Key1 []byte `wire:"length:BOGUS"`
+				}
+				input := MyStruct{}
+				writer := NewWriter()
+				err := Encode(writer, input)
+				require.NotNil(t, err)
+			})
+		})
+	})
 }
