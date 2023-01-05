@@ -72,12 +72,13 @@ type Record struct {
 	IDNumber      uint16    // "${AreaNumber}${IDNumber}" is the fob ID in the UI.
 	AreaNumber    uint8     // "${AreaNumber}${IDNumber}" is the fob ID in the UI.
 	RecordState   uint8     // This is the state that has been recorded (access granted/denied, which door, etc.).
-	BrushDateTime time.Time // This is the time of the access.
+	BrushDateTime time.Time `wire:"type:datetime"` // This is the time of the access.
+	_             [0]byte   `wire:"length:*"`      // Fail if there are any leftover bytes.
 }
 
 // Door returns the door with a one index (1-4).
 // A value of 0 means invalid door.
-func (r *Record) Door() uint8 {
+func (r Record) Door() uint8 {
 	if r.AreaNumber == 0 && r.IDNumber < 100 {
 		if r.IDNumber&0b1100 == 0b0000 {
 			return (uint8(r.IDNumber) & 0b11) + 1
@@ -101,53 +102,15 @@ func (r *Record) Door() uint8 {
 	return (r.RecordState & 0b11) + 1
 }
 
-func (r *Record) AccessGranted() bool {
+func (r Record) AccessGranted() bool {
 	return (r.RecordState&0b10000000 == 0)
 }
 
-func (r Record) Encode(writer *Writer) error {
-	writer.WriteUint16(r.IDNumber)
-	writer.WriteUint8(r.AreaNumber)
-	writer.WriteUint8(r.RecordState)
-	writer.WriteDate(r.BrushDateTime)
-	writer.WriteTime(r.BrushDateTime)
-	return nil
-}
-
-func (r *Record) Decode(reader *Reader) error {
-	var err error
-	r.IDNumber, err = reader.ReadUint16()
-	if err != nil {
-		return fmt.Errorf("could not read ID number: %v", err)
-	}
-	r.AreaNumber, err = reader.ReadUint8()
-	if err != nil {
-		return fmt.Errorf("could not read area number: %v", err)
-	}
-	r.RecordState, err = reader.ReadUint8()
-	if err != nil {
-		return fmt.Errorf("could not read record state: %v", err)
-	}
-	brushDate, err := reader.ReadDate()
-	if err != nil {
-		return fmt.Errorf("could not read brush date: %v", err)
-	}
-	brushTime, err := reader.ReadTime()
-	if err != nil {
-		return fmt.Errorf("could not read brush time: %v", err)
-	}
-	r.BrushDateTime = MergeDateTime(brushDate, brushTime)
-	if !IsAll(reader.Bytes(), 0) {
-		return fmt.Errorf("unexpected contents: %x", reader.Bytes())
-	}
-	return nil
-}
-
 type GetOperationStatusResponse struct {
-	CurrentTime   time.Time // TODO: This is supposed to be the time, but the format makes no sense.
+	CurrentTime   time.Time `wire:"type:hexdatetime"`
 	RecordCount   uint32    // This is the number of access records available.
 	PopedomAmount uint16    // TODO: Is the number of fobs registered on the door?
-	Record        *Record   // This is the access record for the index requested.
+	Record        *Record   `wire:"length:8,null:0xff"` // This is the access record for the index requested.
 	RelayStatus   uint8
 	MagnetState   uint8
 	Reserved1     uint8
@@ -177,7 +140,7 @@ func (r GetOperationStatusResponse) Encode(writer *Writer) error {
 		}
 		writer.WriteBytes(recordBytes)
 	} else {
-		err := r.Record.Encode(writer)
+		err := Encode(writer, r.Record)
 		if err != nil {
 			return fmt.Errorf("could not encode record: %w", err)
 		}
