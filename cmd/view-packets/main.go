@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"strconv"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -497,37 +496,22 @@ func parseData(fullContents *wire.Reader, fromClient bool, controllerAddress str
 
 			logrus.Infof("Value: %d", value)
 		}
-	case 0x10F4:
-		logrus.Infof("Function: Amend, Expand, settings")
+	case wire.FunctionUpdateSetting:
+		logrus.Infof("Function: UpdateSetting")
 		if fromClient {
-			address, err := data.ReadUint8()
+			var request wire.UpdateSettingRequest
+			err = wire.Decode(data, &request)
 			if err != nil {
-				return fmt.Errorf("could not read address: %w", err)
+				return err
 			}
-			unknown1, err := data.ReadUint8()
-			if err != nil {
-				return fmt.Errorf("could not read unknown1: %w", err)
-			}
-			value, err := data.ReadUint8()
-			if err != nil {
-				return fmt.Errorf("could not read value: %w", err)
-			}
-			if !wire.IsAll(data.Bytes(), 0) {
-				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
-			}
-
-			logrus.Infof("Address: %02X", address)
-			logrus.Infof("Unknown1: %d (should probably be 0)", unknown1)
-			logrus.Infof("Value: 0b%08s", strconv.FormatInt(int64(value), 2))
+			logrus.Infof("Request: %+v", request)
 		} else {
-			result, err := data.ReadUint8()
+			var response wire.UpdateSettingResponse
+			err = wire.Decode(data, &response)
 			if err != nil {
-				return fmt.Errorf("could not read result: %w", err)
+				return err
 			}
-			if !wire.IsAll(data.Bytes(), 0) {
-				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
-			}
-			logrus.Infof("Result: %d", result)
+			logrus.Infof("Response: %+v", response)
 		}
 	case 0x10F5:
 		logrus.Infof("Function: Realize timing task")
