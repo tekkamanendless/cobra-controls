@@ -377,73 +377,33 @@ func parseData(fullContents *wire.Reader, fromClient bool, controllerAddress str
 			}
 			logrus.Infof("Response: %+v", response)
 		}
-	case 0x109B:
-		logrus.Infof("Function: Tail plus permissions")
+	case wire.FunctionTailPlusPermissions:
+		logrus.Infof("Function: FunctionTailPlusPermissions")
 		if fromClient {
-			popedomIndex, err := data.ReadUint16()
+			var request wire.TailPlusPermissionsRequest
+			err = wire.Decode(data, &request)
 			if err != nil {
-				return fmt.Errorf("could not read popedom index: %w", err)
+				return err
 			}
-			id, err := data.ReadUint16()
-			if err != nil {
-				return fmt.Errorf("could not read id: %w", err)
-			}
-			userNumber, err := data.ReadUint8()
-			if err != nil {
-				return fmt.Errorf("could not read user number: %w", err)
-			}
-			doorNumber, err := data.ReadUint8()
-			if err != nil {
-				return fmt.Errorf("could not read door number: %w", err)
-			}
-			startDate, err := data.ReadDate()
-			if err != nil {
-				return fmt.Errorf("could not read start date: %w", err)
-			}
-			endDate, err := data.ReadDate()
-			if err != nil {
-				return fmt.Errorf("could not read end date: %w", err)
-			}
-			timeValue, err := data.ReadUint8()
-			if err != nil {
-				return fmt.Errorf("could not read time value: %w", err)
-			}
-			password, err := data.ReadBytes(3)
-			if err != nil {
-				return fmt.Errorf("could not read password: %w", err)
-			}
-			standby, err := data.ReadBytes(4)
-			if err != nil {
-				return fmt.Errorf("could not read standby: %w", err)
-			}
-			if !wire.IsAll(data.Bytes(), 0) {
-				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
-			}
-
-			logrus.Infof("Popedom index: %d", popedomIndex)
-			logrus.Infof("ID: %d", id)
-			logrus.Infof("User number: %d", userNumber)
-			logrus.Infof("Card ID: %s", wire.CardID(userNumber, id))
+			logrus.Infof("Request: %+v", request)
 			if personnelList != nil {
-				if person := personnelList.FindByCardID(wire.CardID(userNumber, id)); person != nil {
+				if person := personnelList.FindByCardID(wire.CardID(request.AreaNumber, request.CardNumber)); person != nil {
 					logrus.Infof("   Person: %+v", *person)
 				}
 			}
-			logrus.Infof("Door number: %d", doorNumber)
-			logrus.Infof("Start date: %v", startDate)
-			logrus.Infof("End date: %v", endDate)
-			logrus.Infof("Time: %X", timeValue)
-			logrus.Infof("Password: %X", password)
-			logrus.Infof("Standby: %X", standby)
+			if controllerList != nil {
+				door := controllerList.LookupDoor(controllerAddress, request.Door)
+				if door != "" {
+					logrus.Infof("Door: %s", door)
+				}
+			}
 		} else {
-			result, err := data.ReadUint8()
+			var response wire.TailPlusPermissionsResponse
+			err = wire.Decode(data, &response)
 			if err != nil {
-				return fmt.Errorf("could not read result: %w", err)
+				return err
 			}
-			if !wire.IsAll(data.Bytes(), 0) {
-				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
-			}
-			logrus.Infof("Result: %d", result)
+			logrus.Infof("Response: %+v", response)
 		}
 	case wire.FunctionOpenDoor:
 		logrus.Infof("Function: OpenDoor")
