@@ -12,6 +12,6 @@ type GetBasicInfoResponse struct {
 	IssueDate time.Time `wire:"type:hexdate"`
 	Version   uint8
 	Model     uint8
-	Unknown2  []byte  `wire:"length:*"`
+	Unknown1  []byte  `wire:"length:21"`
 	_         [0]byte `wire:"length:*"` // Fail if there are any leftover bytes.
 }
