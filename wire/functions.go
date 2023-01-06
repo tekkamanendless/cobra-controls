@@ -9,6 +9,7 @@ const (
 	FunctionGetRecord          = 0x108d
 	FunctionDeleteRecord       = 0x108e
 	FunctionOpenDoor           = 0x109d
+	FunctionGetSetting         = 0x10f1
 	FunctionUpdateSetting      = 0x10f4
 	FunctionGetNetworkInfo     = 0x1101
 	FunctionUpdatePermissions  = 0x1107

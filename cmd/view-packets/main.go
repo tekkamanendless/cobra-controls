@@ -468,33 +468,22 @@ func parseData(fullContents *wire.Reader, fromClient bool, controllerAddress str
 			}
 			logrus.Infof("Response: %+v", response)
 		}
-	case 0x10F1:
-		logrus.Infof("Function: Read")
+	case wire.FunctionGetSetting:
+		logrus.Infof("Function: GetSetting")
 		if fromClient {
-			address, err := data.ReadUint8()
+			var request wire.GetSettingRequest
+			err = wire.Decode(data, &request)
 			if err != nil {
-				return fmt.Errorf("could not read address: %w", err)
+				return err
 			}
-			reserved, err := data.ReadUint8() // I've seen this as "1".
-			if err != nil {
-				return fmt.Errorf("could not read reserved: %w", err)
-			}
-			if !wire.IsAll(data.Bytes(), 0) {
-				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
-			}
-
-			logrus.Infof("Address: %d", address)
-			logrus.Infof("Reserved: %d", reserved)
+			logrus.Infof("Request: %+v", request)
 		} else {
-			value, err := data.ReadUint8()
+			var response wire.GetSettingResponse
+			err = wire.Decode(data, &response)
 			if err != nil {
-				return fmt.Errorf("could not read value: %w", err)
+				return err
 			}
-			if !wire.IsAll(data.Bytes(), 0) {
-				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
-			}
-
-			logrus.Infof("Value: %d", value)
+			logrus.Infof("Response: %+v", response)
 		}
 	case wire.FunctionUpdateSetting:
 		logrus.Infof("Function: UpdateSetting")
