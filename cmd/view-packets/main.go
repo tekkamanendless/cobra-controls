@@ -236,8 +236,8 @@ func parseData(fullContents *wire.Reader, fromClient bool, controllerAddress str
 			}
 			logrus.Infof("Response: %+v", response)
 		}
-	case wire.FunctionDeleteRecords:
-		logrus.Infof("Function: DeleteRecords")
+	case wire.FunctionDeleteRecord:
+		logrus.Infof("Function: DeleteRecord")
 		if fromClient {
 			var request wire.DeleteRecordRequest
 			err = wire.Decode(data, &request)
@@ -259,21 +259,22 @@ func parseData(fullContents *wire.Reader, fromClient bool, controllerAddress str
 	case 0x1091:
 		logrus.Infof("Function: Upload the mission")
 		logrus.Warnf("TODO NOT IMPLEMENTED")
-	case 0x1093:
-		logrus.Infof("Function: Clear popedom")
+	case wire.FunctionClearUpload:
+		logrus.Infof("Function: ClearUpload")
 		if fromClient {
-			if !wire.IsAll(data.Bytes(), 0) {
-				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
-			}
-		} else {
-			result, err := data.ReadUint8()
+			var request wire.ClearUploadRequest
+			err = wire.Decode(data, &request)
 			if err != nil {
-				return fmt.Errorf("could not read result: %w", err)
+				return err
 			}
-			if !wire.IsAll(data.Bytes(), 0) {
-				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
+			logrus.Infof("Request: %+v", request)
+		} else {
+			var response wire.ClearUploadResponse
+			err = wire.Decode(data, &response)
+			if err != nil {
+				return err
 			}
-			logrus.Infof("Result: %d", result)
+			logrus.Infof("Response: %+v", response)
 		}
 	case 0x1095:
 		logrus.Infof("Function: Read popedom")
