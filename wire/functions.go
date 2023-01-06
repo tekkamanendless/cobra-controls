@@ -5,6 +5,7 @@ const (
 	FunctionGetBasicInfo       = 0x1082
 	FunctionSetTime            = 0x108b
 	FunctionGetRecord          = 0x108d
+	FunctionDeleteRecords      = 0x108e
 	FunctionOpenDoor           = 0x109d
 	FunctionGetNetworkInfo     = 0x1101
 	FunctionUpdatePermissions  = 0x1107

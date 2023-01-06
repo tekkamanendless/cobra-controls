@@ -236,29 +236,22 @@ func parseData(fullContents *wire.Reader, fromClient bool, controllerAddress str
 			}
 			logrus.Infof("Response: %+v", response)
 		}
-	case 0x108E:
-		logrus.Infof("Function: Remove a specified number of records")
+	case wire.FunctionDeleteRecords:
+		logrus.Infof("Function: DeleteRecords")
 		if fromClient {
-			recordIndex, err := data.ReadUint32()
+			var request wire.DeleteRecordRequest
+			err = wire.Decode(data, &request)
 			if err != nil {
-				return fmt.Errorf("could not read record index: %w", err)
+				return err
 			}
-			// All remaining bytes are reserved.
-			if !wire.IsAll(data.Bytes(), 0) {
-				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
-			}
-			logrus.Infof("Record index: %d", recordIndex)
+			logrus.Infof("Request: %+v", request)
 		} else {
-			result, err := data.ReadUint8()
+			var response wire.DeleteRecordResponse
+			err = wire.Decode(data, &response)
 			if err != nil {
-				return fmt.Errorf("could not read result: %w", err)
+				return err
 			}
-			// All remaining bytes are reserved.
-			if !wire.IsAll(data.Bytes(), 0) {
-				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
-			}
-
-			logrus.Infof("Result: %d (0 is good)", result)
+			logrus.Infof("Response: %+v", response)
 		}
 	case 0x108F:
 		logrus.Infof("Function: Set door controls (online/delay)")
