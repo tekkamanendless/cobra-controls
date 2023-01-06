@@ -361,20 +361,22 @@ func parseData(fullContents *wire.Reader, fromClient bool, controllerAddress str
 			logrus.Infof("End time 4: %v", endTime4)
 			logrus.Infof("Standby: %X", standby)
 		}
-	case 0x1098:
-		// TODO: This appears to be some kind of simple thing, maybe a ping/pong action.
+	case wire.FunctionUnknown1098:
 		logrus.Infof("Function: Unknown1098")
 		if fromClient {
-			logrus.Infof("Unknown: %X", data)
-		} else {
-			result, err := data.ReadUint8()
+			var request wire.Unknown1098Request
+			err = wire.Decode(data, &request)
 			if err != nil {
-				return fmt.Errorf("could not read result: %w", err)
+				return err
 			}
-			if !wire.IsAll(data.Bytes(), 0) {
-				logrus.Warnf("Unexpected remaining data; should be all zeros: %X", data.Bytes())
+			logrus.Infof("Request: %+v", request)
+		} else {
+			var response wire.Unknown1098Response
+			err = wire.Decode(data, &response)
+			if err != nil {
+				return err
 			}
-			logrus.Infof("Result: %d", result)
+			logrus.Infof("Response: %+v", response)
 		}
 	case 0x109B:
 		logrus.Infof("Function: Tail plus permissions")

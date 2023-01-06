@@ -2,6 +2,7 @@ package wire
 
 const (
 	FunctionClearUpload        = 0x1093 // TODO: I'm not exactly sure what this is.
+	FunctionUnknown1098        = 0x1098 // TODO: Maybe ping/pong?
 	FunctionGetOperationStatus = 0x1081
 	FunctionGetBasicInfo       = 0x1082
 	FunctionSetTime            = 0x108b
