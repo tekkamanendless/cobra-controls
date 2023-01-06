@@ -87,7 +87,13 @@ func (r *Reader) ReadDate() (time.Time, error) {
 	}
 	year := (value & 0b1111111000000000) >> 9
 	month := (value & 0b0000000111100000) >> 5
+	if month < 1 || month > 12 {
+		return time.Time{}, fmt.Errorf("invalid month: %d", month)
+	}
 	day := (value & 0b0000000000011111) >> 0
+	if month < 1 || month > 31 {
+		return time.Time{}, fmt.Errorf("invalid day: %d", month)
+	}
 
 	output := time.Date(2000+int(year), time.Month(month), int(day), 0, 0, 0, 0, time.UTC)
 	return output, nil
