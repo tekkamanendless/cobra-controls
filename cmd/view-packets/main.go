@@ -281,85 +281,24 @@ func parseData(fullContents *wire.Reader, fromClient bool, controllerAddress str
 	case 0x1096:
 		logrus.Infof("Function: Read control period of time")
 		logrus.Warnf("TODO NOT IMPLEMENTED")
-	case 0x1097:
-		logrus.Infof("Function: Modification control period of time")
-		// TODO: This supposedly returns something "from 0" (maybe the period of time index?) on failure; otherwise it returns the same information.
-		if fromClient || !fromClient {
-			periodOfTimeIndex, err := data.ReadUint16()
+	case wire.FunctionUpdateControlPeriod:
+		logrus.Infof("Function: UpdateControlPeriod")
+		if fromClient {
+			var request wire.UpdateControlPeriodRequest
+			err = wire.Decode(data, &request)
 			if err != nil {
-				return fmt.Errorf("could not read period of time index: %w", err)
+				return err
 			}
-			weekControl, err := data.ReadUint8()
+			logrus.Infof("Request: %+v", request)
+		} else {
+			var response wire.UpdateControlPeriodResponse
+			err = wire.Decode(data, &response)
 			if err != nil {
-				return fmt.Errorf("could not read week control: %w", err)
+				return err
 			}
-			linkPeriodOfTime, err := data.ReadUint8()
-			if err != nil {
-				return fmt.Errorf("could not read link period of time: %w", err)
-			}
-			standby1, err := data.ReadUint8()
-			if err != nil {
-				return fmt.Errorf("could not read standby 1: %w", err)
-			}
-			standby2, err := data.ReadUint8()
-			if err != nil {
-				return fmt.Errorf("could not read standby 2: %w", err)
-			}
-			startTime1, err := data.ReadTime()
-			if err != nil {
-				return fmt.Errorf("could not read start time 1: %w", err)
-			}
-			endTime1, err := data.ReadTime()
-			if err != nil {
-				return fmt.Errorf("could not read end time 1: %w", err)
-			}
-			startTime2, err := data.ReadTime()
-			if err != nil {
-				return fmt.Errorf("could not read start time 2: %w", err)
-			}
-			endTime2, err := data.ReadTime()
-			if err != nil {
-				return fmt.Errorf("could not read end time 2: %w", err)
-			}
-			startTime3, err := data.ReadTime()
-			if err != nil {
-				return fmt.Errorf("could not read start time 3: %w", err)
-			}
-			endTime3, err := data.ReadTime()
-			if err != nil {
-				return fmt.Errorf("could not read end time 3: %w", err)
-			}
-			startTime4, err := data.ReadTime()
-			if err != nil {
-				return fmt.Errorf("could not read start time 4: %w", err)
-			}
-			endTime4, err := data.ReadTime()
-			if err != nil {
-				return fmt.Errorf("could not read end time 4: %w", err)
-			}
-			standby, err := data.ReadBytes(4)
-			if err != nil {
-				return fmt.Errorf("could not read standby: %w", err)
-			}
-			if data.Length() != 0 {
-				logrus.Warnf("Unexpected additional data: (%d)", data.Length())
-			}
-
-			logrus.Infof("Period of time index: %d", periodOfTimeIndex)
-			logrus.Infof("Week control: %d", weekControl)
-			logrus.Infof("Link period of time: %d", linkPeriodOfTime)
-			logrus.Infof("Standby 1: %d", standby1)
-			logrus.Infof("Standby 2: %d", standby2)
-			logrus.Infof("Start time 1: %v", startTime1)
-			logrus.Infof("End time 1: %v", endTime1)
-			logrus.Infof("Start time 2: %v", startTime2)
-			logrus.Infof("End time 2: %v", endTime2)
-			logrus.Infof("Start time 3: %v", startTime3)
-			logrus.Infof("End time 3: %v", endTime3)
-			logrus.Infof("Start time 4: %v", startTime4)
-			logrus.Infof("End time 4: %v", endTime4)
-			logrus.Infof("Standby: %X", standby)
+			logrus.Infof("Response: %+v", response)
 		}
+
 	case wire.FunctionUnknown1098:
 		logrus.Infof("Function: Unknown1098")
 		if fromClient {

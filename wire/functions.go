@@ -8,6 +8,7 @@ const (
 	FunctionSetTime             = 0x108b
 	FunctionGetRecord           = 0x108d
 	FunctionDeleteRecord        = 0x108e
+	FunctionUpdateControlPeriod = 0x1097
 	FunctionTailPlusPermissions = 0x109b
 	FunctionOpenDoor            = 0x109d
 	FunctionGetSetting          = 0x10f1
