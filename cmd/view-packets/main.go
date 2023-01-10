@@ -275,9 +275,6 @@ func parseData(fullContents *wire.Reader, fromClient bool, controllerAddress str
 			}
 			logrus.Infof("Response: %+v", response)
 		}
-	case 0x1095:
-		logrus.Infof("Function: Read popedom")
-		logrus.Warnf("TODO NOT IMPLEMENTED")
 	case 0x1096:
 		logrus.Infof("Function: Read control period of time")
 		logrus.Warnf("TODO NOT IMPLEMENTED")
@@ -400,6 +397,28 @@ func parseData(fullContents *wire.Reader, fromClient bool, controllerAddress str
 				return err
 			}
 			logrus.Infof("Response: %+v", response)
+		}
+	case wire.FunctionGetUpload:
+		logrus.Infof("Function: GetUpload")
+		if fromClient {
+			var request wire.GetUploadRequest
+			err = wire.Decode(data, &request)
+			if err != nil {
+				return err
+			}
+			logrus.Infof("Request: %+v", request)
+		} else {
+			var response wire.GetUploadResponse
+			err = wire.Decode(data, &response)
+			if err != nil {
+				return err
+			}
+			logrus.Infof("Response: %+v", response)
+			if personnelList != nil {
+				if person := personnelList.FindByCardID(wire.CardID(response.AreaNumber, response.IDNumber)); person != nil {
+					logrus.Infof("   Person: %+v", *person)
+				}
+			}
 		}
 	case 0x10F5:
 		logrus.Infof("Function: Realize timing task")

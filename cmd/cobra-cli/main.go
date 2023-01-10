@@ -162,6 +162,71 @@ func main() {
 
 	{
 		cmd := &cobra.Command{
+			Use:   "get-upload <index>[ ...]",
+			Short: "Get an upload record",
+			Long:  ``,
+			Args:  cobra.MinimumNArgs(1),
+			Run: func(cmd *cobra.Command, args []string) {
+				if len(clients) == 0 {
+					logrus.Errorf("Invalid client")
+					os.Exit(1)
+				}
+
+				var indexes []uint16
+				for _, arg := range args {
+					v, err := strconv.ParseInt(arg, 0, 17)
+					if err != nil {
+						logrus.Errorf("Could not parse index: %v", err)
+						os.Exit(1)
+					}
+					indexes = append(indexes, uint16(v))
+				}
+
+				for _, client := range clients {
+					for _, index := range indexes {
+						logrus.Debugf("Index: %d", index)
+						request := wire.GetUploadRequest{
+							Index: index,
+						}
+						var response wire.GetUploadResponse
+						err := client.Raw(wire.FunctionGetUpload, &request, &response)
+						if err != nil {
+							logrus.Errorf("Error from client: %v", err)
+							continue
+						}
+						logrus.Debugf("Response: %+v", response)
+
+						var controller string
+						var door string
+						var person *cobrafile.Person
+						if controllerList != nil {
+							controller, door = controllerList.LookupNameAndDoor(client.ControllerAddress, response.DoorNumber)
+						}
+						if personnelList != nil {
+							person = personnelList.FindByCardID(wire.CardID(response.AreaNumber, response.IDNumber))
+						}
+						if controller == "" {
+							controller = client.ControllerAddress
+						}
+						if door == "" {
+							door = fmt.Sprintf("%d", response.DoorNumber)
+						}
+						if person == nil {
+							fmt.Printf("Controller: %s | Index: %d | Door: %s | Card ID: %s | Response: %+v\n", controller, request.Index, door, wire.CardID(response.AreaNumber, response.IDNumber), response)
+						} else {
+							fmt.Printf("Controller: %s | Index: %d | Door: %s | Card ID: %s | Name: %s | Response: %+v\n", controller, request.Index, door, wire.CardID(response.AreaNumber, response.IDNumber), person.Name, response)
+						}
+
+					}
+				}
+			},
+		}
+
+		rootCommand.AddCommand(cmd)
+	}
+
+	{
+		cmd := &cobra.Command{
 			Use:   "history [<index|range>[ ...]]",
 			Short: "Query the history",
 			Long:  `You may specify either a specific index, such as "1234", or a range of the form "last #", such as "last 50".  If nothing is specified, then the most recent record is shown.`,
