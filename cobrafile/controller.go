@@ -83,6 +83,9 @@ func LoadController(filename string) (ControllerList, error) {
 	return result, nil
 }
 
+// LookupName returns the controller name.
+//
+// If no controller is found, this returns the empty string.
 func (l ControllerList) LookupName(address string) string {
 	for _, controller := range l {
 		if controller.Address == address {
@@ -92,6 +95,7 @@ func (l ControllerList) LookupName(address string) string {
 	return ""
 }
 
+// FindDoor returns the 1-index door number.
 func (l ControllerList) FindDoor(address string, door string) (uint8, bool) {
 	for _, controller := range l {
 		if controller.Address == address {
@@ -105,6 +109,7 @@ func (l ControllerList) FindDoor(address string, door string) (uint8, bool) {
 	return 0, false
 }
 
+// LookupDoor returns the 1-index door number.
 func (l ControllerList) LookupDoor(address string, door uint8) string {
 	for _, controller := range l {
 		if controller.Address == address {
@@ -116,10 +121,11 @@ func (l ControllerList) LookupDoor(address string, door uint8) string {
 	return ""
 }
 
+// LookupNameAndDoor returns the controller name and the 1-index door number.
 func (l ControllerList) LookupNameAndDoor(address string, door uint8) (string, string) {
 	for _, controller := range l {
 		if controller.Address == address {
-			if door > 0 && int(door) < len(controller.Doors) {
+			if door > 0 && int(door) <= len(controller.Doors) {
 				return controller.Name, controller.Doors[door-1]
 			}
 			return controller.Name, ""
