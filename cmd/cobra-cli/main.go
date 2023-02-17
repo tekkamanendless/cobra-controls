@@ -433,7 +433,7 @@ func main() {
 										var person *cobrafile.Person
 										var controller, door string
 										if controllerList != nil {
-											controller, door = controllerList.LookupNameAndDoor(client.ControllerAddress, response.Record.RecordState)
+											controller, door = controllerList.LookupNameAndDoor(client.ControllerAddress, response.Record.Door())
 										}
 										if personnelList != nil {
 											person = personnelList.FindByCardID(wire.CardID(response.Record.AreaNumber, response.Record.IDNumber))
@@ -442,12 +442,12 @@ func main() {
 											controller = client.ControllerAddress
 										}
 										if door == "" {
-											door = fmt.Sprintf("%d", response.Record.RecordState)
+											door = fmt.Sprintf("%d", response.Record.Door())
 										}
 										if person == nil {
-											fmt.Printf("%v | Controller: %s | Door: %s | Card ID: %s\n", response.Record.BrushDateTime, controller, door, wire.CardID(response.Record.AreaNumber, response.Record.IDNumber))
+											fmt.Printf("%v | Controller: %s | Door: %s | Card ID: %s | Access: %t\n", response.Record.BrushDateTime, controller, door, wire.CardID(response.Record.AreaNumber, response.Record.IDNumber), response.Record.AccessGranted())
 										} else {
-											fmt.Printf("%v | Controller: %s | Door: %s | Card ID: %s | Name: %s\n", response.Record.BrushDateTime, controller, door, wire.CardID(response.Record.AreaNumber, response.Record.IDNumber), person.Name)
+											fmt.Printf("%v | Controller: %s | Door: %s | Card ID: %s | Name: %s | Access: %t\n", response.Record.BrushDateTime, controller, door, wire.CardID(response.Record.AreaNumber, response.Record.IDNumber), person.Name, response.Record.AccessGranted())
 										}
 									}
 								}
