@@ -443,96 +443,190 @@ func parseData(fullContents *wire.Reader, fromClient bool, controllerAddress str
 			if err != nil {
 				return fmt.Errorf("could not read unknown4: %w", err)
 			}
-			logrus.Infof("Unknown1: %d", unknown1)
-			logrus.Infof("Unknown2: %d", unknown2)
-			logrus.Infof("Unknown3: %d (index, maybe?)", unknown3)
-			logrus.Infof("Unknown4: %d", unknown4)
-			for p := 0; data.Length() >= 16; p++ {
-				popedom, err := data.Read(16)
+			logrus.Infof("Unknown1: %d", unknown1)                             // This seems to always be "3".
+			logrus.Infof("Unknown2: %d", unknown2)                             // This seems to always be "0".
+			logrus.Infof("Unknown3: %d (index, maybe?)", unknown3)             // This seems to be the 0-index for access uploads.
+			logrus.Infof("Unknown4: %d (1 for basic, 4 for access)", unknown4) // This seems to be 1 for basic upload, 4 for access upload.
+			// TODO: The remaining data appears to be different based on Unknown4.
+			// TODO: For "basic" uploads, I don't know what this is yet.
+			// TODO: For "access" uploads (Unknown4=4), this is a list of popedom records.
+			switch unknown4 {
+			case 1:
+				newData, err := data.Read(270)
 				if err != nil {
-					logrus.Warnf("could not read popedom [%d]: %v", p, err)
-					continue
+					return fmt.Errorf("could not read proper payload: %w", err)
 				}
-				logrus.Infof("Popedom[%2d]: %X", p, popedom.Bytes())
-				if wire.IsAll(popedom.Bytes(), 0xff) {
-					logrus.Infof("Skipping bogus popedom.")
-					continue
+				if !wire.IsAll(data.Bytes(), 0x00) {
+					logrus.Infof("Remainder is not all 0x00: %x", data.Bytes())
 				}
-				err = func(popedom *wire.Reader) error {
-					id, err := popedom.ReadUint16()
-					if err != nil {
-						return fmt.Errorf("could not read id: %w", err)
-					}
-					area, err := popedom.ReadUint8()
-					if err != nil {
-						return fmt.Errorf("could not read area: %w", err)
-					}
-					door, err := popedom.ReadUint8()
-					if err != nil {
-						return fmt.Errorf("could not read door: %w", err)
-					}
-					openDate, err := popedom.ReadDate()
-					if err != nil {
-						return fmt.Errorf("could not read open date: %w", err)
-					}
-					closeDate, err := popedom.ReadDate()
-					if err != nil {
-						return fmt.Errorf("could not read close date: %w", err)
-					}
-					controlIndex, err := popedom.ReadUint8()
-					if err != nil {
-						return fmt.Errorf("could not read control index: %w", err)
-					}
-					password, err := popedom.ReadBytes(3)
-					if err != nil {
-						return fmt.Errorf("could not read password: %w", err)
-					}
-					standby1, err := popedom.ReadUint8()
-					if err != nil {
-						return fmt.Errorf("could not read standby 1: %w", err)
-					}
-					standby2, err := popedom.ReadUint8()
-					if err != nil {
-						return fmt.Errorf("could not read standby 2: %w", err)
-					}
-					standby3, err := popedom.ReadUint8()
-					if err != nil {
-						return fmt.Errorf("could not read standby 3: %w", err)
-					}
-					standby4, err := popedom.ReadUint8()
-					if err != nil {
-						return fmt.Errorf("could not read standby 4: %w", err)
-					}
-					if popedom.Length() != 0 {
-						logrus.Warnf("Unexpected extra popedom data: (%d)", popedom.Length())
-					}
-					logrus.Infof("ID: %d", id)
-					logrus.Infof("Area: %d", area)
-					logrus.Infof("Card ID: %s", wire.CardID(area, id))
-					if personnelList != nil {
-						if person := personnelList.FindByCardID(wire.CardID(area, id)); person != nil {
-							logrus.Infof("   Person: %+v", *person)
-						}
-					}
-					logrus.Infof("Door: %d", door)
-					logrus.Infof("Open Date: %v", openDate)
-					logrus.Infof("Close Date: %v", closeDate)
-					logrus.Infof("Control index: %X", controlIndex) // 0 to not use control time; 1 to specify a time.
-					logrus.Infof("Password: %X", password)
-					logrus.Infof("Standby 1: %X", standby1) // 1 for the "first card users"; 0 for not those users.
-					logrus.Infof("Standby 2: %X", standby2) // 0 for the general user group; >0 for special group permissions.
-					logrus.Infof("Standby 3: %X", standby3)
-					logrus.Infof("Standby 4: %X", standby4)
 
-					return nil
-				}(popedom)
-				if err != nil {
-					logrus.Warnf("could not parse popedom [%d]: %v", p, err)
-					continue
+				data = newData
+				switch unknown3 {
+				case 1:
+					unknown5, err := data.ReadUint16()
+					if err != nil {
+						return fmt.Errorf("could not read unknown5: %w", err)
+					}
+					logrus.Infof("Unknown5: %d", unknown5)
+
+					openDelay1, err := data.ReadUint16()
+					if err != nil {
+						return fmt.Errorf("could not read openDelay1: %w", err)
+					}
+					logrus.Infof("Open delay 1: %d seconds", openDelay1/10)
+					openDelay2, err := data.ReadUint16()
+					if err != nil {
+						return fmt.Errorf("could not read openDelay2: %w", err)
+					}
+					logrus.Infof("Open delay 2: %d seconds", openDelay2/10)
+					openDelay3, err := data.ReadUint16()
+					if err != nil {
+						return fmt.Errorf("could not read openDelay3: %w", err)
+					}
+					logrus.Infof("Open delay 3: %d seconds", openDelay3/10)
+					openDelay4, err := data.ReadUint16()
+					if err != nil {
+						return fmt.Errorf("could not read openDelay4: %w", err)
+					}
+					logrus.Infof("Open delay 4: %d seconds", openDelay4/10)
+
+					controlState1, err := data.ReadUint8()
+					if err != nil {
+						return fmt.Errorf("could not read controlState1: %w", err)
+					}
+					logrus.Infof("Control state 1: %d (1 is open, 2 is closed, 3 is door controlled)", controlState1)
+					controlState2, err := data.ReadUint8()
+					if err != nil {
+						return fmt.Errorf("could not read controlState2: %w", err)
+					}
+					logrus.Infof("Control state 2: %d (1 is open, 2 is closed, 3 is door controlled)", controlState2)
+					controlState3, err := data.ReadUint8()
+					if err != nil {
+						return fmt.Errorf("could not read controlState3: %w", err)
+					}
+					logrus.Infof("Control state 3: %d (1 is open, 2 is closed, 3 is door controlled)", controlState3)
+					controlState4, err := data.ReadUint8()
+					if err != nil {
+						return fmt.Errorf("could not read controlState4: %w", err)
+					}
+					logrus.Infof("Control state 4: %d (1 is open, 2 is closed, 3 is door controlled)", controlState4)
+
+					// Remainder example:
+					// 000000000000000000000000000000010100100000fa006401015500000000700000000000000000000000000000000000000000000000000000000084941309ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000d00000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000ff000000000000000000000000000000000000000000000000000000000000000000fcffc3e3f929001000fcffffff0f
+					//                                     ^|                                                                                      ^                                                              |
+					//                                     Invalid card swiping                                                                    \______________________________________________________________/
+					//                                                                                                                               Passwords (list of 16-bit numbers)
+
+					remainder, err := data.Read(data.Length())
+					if err != nil {
+						return fmt.Errorf("could not read data: %w", err)
+					}
+					logrus.Infof("Unknown10F9_%d: %x", unknown4, remainder.Bytes())
+				default:
+					if wire.IsAll(data.Bytes(), 0xff) {
+						logrus.Infof("Remainder is all 0xff.")
+					} else {
+						remainder, err := data.Read(data.Length())
+						if err != nil {
+							return fmt.Errorf("could not read data: %w", err)
+						}
+						logrus.Infof("Unknown10F9_%d_%d: %x", unknown4, unknown3, remainder.Bytes())
+					}
 				}
-			}
-			if data.Length() != 0 {
-				logrus.Warnf("Unexpected trailing data length: (%d)", data.Length())
+			case 4:
+				for p := 0; data.Length() >= 16; p++ {
+					popedom, err := data.Read(16)
+					if err != nil {
+						logrus.Warnf("could not read popedom [%d]: %v", p, err)
+						continue
+					}
+					logrus.Infof("Popedom[%2d]: %X", p, popedom.Bytes())
+					if wire.IsAll(popedom.Bytes(), 0xff) {
+						logrus.Infof("Skipping bogus popedom.")
+						continue
+					}
+					err = func(popedom *wire.Reader) error {
+						id, err := popedom.ReadUint16()
+						if err != nil {
+							return fmt.Errorf("could not read id: %w", err)
+						}
+						area, err := popedom.ReadUint8()
+						if err != nil {
+							return fmt.Errorf("could not read area: %w", err)
+						}
+						door, err := popedom.ReadUint8()
+						if err != nil {
+							return fmt.Errorf("could not read door: %w", err)
+						}
+						openDate, err := popedom.ReadDate()
+						if err != nil {
+							return fmt.Errorf("could not read open date: %w", err)
+						}
+						closeDate, err := popedom.ReadDate()
+						if err != nil {
+							return fmt.Errorf("could not read close date: %w", err)
+						}
+						controlIndex, err := popedom.ReadUint8()
+						if err != nil {
+							return fmt.Errorf("could not read control index: %w", err)
+						}
+						password, err := popedom.ReadBytes(3)
+						if err != nil {
+							return fmt.Errorf("could not read password: %w", err)
+						}
+						standby1, err := popedom.ReadUint8()
+						if err != nil {
+							return fmt.Errorf("could not read standby 1: %w", err)
+						}
+						standby2, err := popedom.ReadUint8()
+						if err != nil {
+							return fmt.Errorf("could not read standby 2: %w", err)
+						}
+						standby3, err := popedom.ReadUint8()
+						if err != nil {
+							return fmt.Errorf("could not read standby 3: %w", err)
+						}
+						standby4, err := popedom.ReadUint8()
+						if err != nil {
+							return fmt.Errorf("could not read standby 4: %w", err)
+						}
+						if popedom.Length() != 0 {
+							logrus.Warnf("Unexpected extra popedom data: (%d)", popedom.Length())
+						}
+						logrus.Infof("ID: %d", id)
+						logrus.Infof("Area: %d", area)
+						logrus.Infof("Card ID: %s", wire.CardID(area, id))
+						if personnelList != nil {
+							if person := personnelList.FindByCardID(wire.CardID(area, id)); person != nil {
+								logrus.Infof("   Person: %+v", *person)
+							}
+						}
+						logrus.Infof("Door: %d", door)
+						logrus.Infof("Open Date: %v", openDate)
+						logrus.Infof("Close Date: %v", closeDate)
+						logrus.Infof("Control index: %X", controlIndex) // 0 to not use control time; 1 to specify a time.
+						logrus.Infof("Password: %X", password)
+						logrus.Infof("Standby 1: %X", standby1) // 1 for the "first card users"; 0 for not those users.
+						logrus.Infof("Standby 2: %X", standby2) // 0 for the general user group; >0 for special group permissions.
+						logrus.Infof("Standby 3: %X", standby3)
+						logrus.Infof("Standby 4: %X", standby4)
+
+						return nil
+					}(popedom)
+					if err != nil {
+						logrus.Warnf("could not parse popedom [%d]: %v", p, err)
+						continue
+					}
+				}
+				if data.Length() != 0 {
+					logrus.Warnf("Unexpected trailing data length: (%d)", data.Length())
+				}
+			default:
+				remainder, err := data.Read(data.Length())
+				if err != nil {
+					return fmt.Errorf("could not read data: %w", err)
+				}
+				logrus.Infof("Unknown10F9_%d: %x", unknown4, remainder.Bytes())
 			}
 		} else {
 			result, err := data.ReadUint8()
