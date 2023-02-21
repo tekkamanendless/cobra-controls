@@ -16,4 +16,5 @@ const (
 	FunctionUpdateSetting       = 0x10f4
 	FunctionGetNetworkInfo      = 0x1101
 	FunctionUpdatePermissions   = 0x1107
+	FunctionDeletePermissions   = 0x1108
 )

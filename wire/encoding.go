@@ -199,6 +199,16 @@ func decodeViaReflection(reader *Reader, myValue reflect.Value, options encoding
 		if myValue.IsNil() {
 			switch myType.Elem().Kind() {
 			case reflect.Struct:
+				if options.Length == 0 {
+					switch options.Type {
+					case TypeDate:
+						options.Length = 2
+					case TypeTime:
+						options.Length = 2
+					case TypeDateTime:
+						options.Length = 4
+					}
+				}
 				if options.Length > 0 {
 					logrus.Debugf("decodeViaReflection: reading %d bytes.", options.Length)
 					subReader, err := reader.Read(options.Length)

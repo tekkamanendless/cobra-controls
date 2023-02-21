@@ -682,9 +682,29 @@ func parseData(fullContents *wire.Reader, fromClient bool, controllerAddress str
 			}
 			logrus.Infof("Response: %+v", response)
 		}
-	case 0x1108:
-		logrus.Infof("Function: Delete an authority")
-		logrus.Warnf("TODO NOT IMPLEMENTED")
+	case wire.FunctionDeletePermissions:
+		logrus.Infof("Function: DeletePermissions")
+		if fromClient {
+			var request wire.DeletePermissionsRequest
+			err = wire.Decode(data, &request)
+			if err != nil {
+				return err
+			}
+			logrus.Infof("Request: %+v", request)
+			logrus.Infof("Card ID: %s", wire.CardID(request.Area, request.CardID))
+			if personnelList != nil {
+				if person := personnelList.FindByCardID(wire.CardID(request.Area, request.CardID)); person != nil {
+					logrus.Infof("   Person: %+v", *person)
+				}
+			}
+		} else {
+			var response wire.DeletePermissionsResponse
+			err = wire.Decode(data, &response)
+			if err != nil {
+				return err
+			}
+			logrus.Infof("Response: %+v", response)
+		}
 	case 0x11F2:
 		logrus.Infof("Function: Setting TCPIP")
 		logrus.Warnf("TODO NOT IMPLEMENTED")
