@@ -138,9 +138,9 @@ func main() {
 
 func parseData(fullContents *wire.Reader, fromClient bool, controllerAddress string, controllerList cobrafile.ControllerList, personnelList cobrafile.PersonnelList) error {
 	if fromClient {
-		logrus.Infof("Mode: Client")
+		logrus.Infof("From: Client")
 	} else {
-		logrus.Infof("Mode: Server")
+		logrus.Infof("From: Controller")
 	}
 
 	var envelope wire.Envelope
@@ -150,14 +150,18 @@ func parseData(fullContents *wire.Reader, fromClient bool, controllerAddress str
 	}
 
 	logrus.Infof("Packet:")
-	var controllerName string
-	if controllerList != nil {
-		controllerName = controllerList.LookupName(controllerAddress)
+	if fromClient {
+		logrus.Infof("   Source: %s", controllerAddress)
+	} else {
+		var controllerName string
+		if controllerList != nil {
+			controllerName = controllerList.LookupName(controllerAddress)
+		}
+		logrus.Infof("   Controller: %s (name: %s)", controllerAddress, controllerName)
 	}
-	logrus.Infof("Controller: %s (name: %s)", controllerAddress, controllerName)
-	logrus.Infof("Board address: 0x%X", envelope.BoardAddress)
-	logrus.Infof("Function type: 0x%X", envelope.Function)
-	logrus.Infof("Remaining data: (%d) %X", len(envelope.Contents), envelope.Contents)
+	logrus.Infof("   Board address: 0x%X", envelope.BoardAddress)
+	logrus.Infof("   Function type: 0x%X", envelope.Function)
+	logrus.Infof("   Remaining data: (%d) %X", len(envelope.Contents), envelope.Contents)
 
 	data := wire.NewReader(envelope.Contents)
 
