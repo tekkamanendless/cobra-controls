@@ -57,14 +57,14 @@ func main() {
 					logrus.Debugf("This is a TCP packet.")
 					tcp, _ := tcpLayer.(*layers.TCP)
 					logrus.Debugf("From src port %d to dst port %d.", tcp.SrcPort, tcp.DstPort)
-					if tcp.SrcPort != 60000 && tcp.DstPort != 60000 {
+					if tcp.SrcPort != wire.PortDefault && tcp.DstPort != wire.PortDefault {
 						return false
 					}
 				} else if udpLayer := packet.Layer(layers.LayerTypeUDP); udpLayer != nil {
 					logrus.Debugf("This is a UDP packet.")
 					udp, _ := udpLayer.(*layers.UDP)
 					logrus.Debugf("From src port %d to dst port %d.", udp.SrcPort, udp.DstPort)
-					if udp.SrcPort != 60000 && udp.DstPort != 60000 {
+					if udp.SrcPort != wire.PortDefault && udp.DstPort != wire.PortDefault {
 						return false
 					}
 				} else {
@@ -94,7 +94,7 @@ func main() {
 					var controllerAddress string
 					if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
 						if tcp, ok := tcpLayer.(*layers.TCP); ok {
-							if tcp.DstPort == 60000 {
+							if tcp.DstPort == wire.PortDefault {
 								fromClient = true
 								controllerAddress = packet.NetworkLayer().NetworkFlow().Dst().String()
 							} else {
@@ -103,7 +103,7 @@ func main() {
 						}
 					} else if udpLayer := packet.Layer(layers.LayerTypeUDP); udpLayer != nil {
 						if udp, ok := udpLayer.(*layers.UDP); ok {
-							if udp.DstPort == 60000 {
+							if udp.DstPort == wire.PortDefault {
 								fromClient = true
 								controllerAddress = packet.NetworkLayer().NetworkFlow().Dst().String()
 							} else {

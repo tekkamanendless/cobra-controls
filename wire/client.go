@@ -15,6 +15,8 @@ const (
 	ProtocolUDP = "udp"
 )
 
+const PortDefault = 60000
+
 type Client struct {
 	Protocol          Protocol
 	ControllerAddress string
@@ -30,7 +32,7 @@ func (c *Client) init() error {
 	if c.conn == nil {
 		logrus.Debugf("Creating connection.")
 		if c.ControllerPort == 0 {
-			c.ControllerPort = 60000
+			c.ControllerPort = PortDefault
 		}
 		if len(c.Protocol) == 0 {
 			c.Protocol = ProtocolTCP

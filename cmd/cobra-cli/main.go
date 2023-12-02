@@ -98,7 +98,7 @@ func main() {
 	}
 	rootCommand.PersistentFlags().StringVar(&controllerName, "controller-name", "", "A wildcard expression to match controllers")
 	rootCommand.PersistentFlags().StringVar(&controllerAddress, "controller-address", "", "Set the controller address")
-	rootCommand.PersistentFlags().IntVar(&controllerPort, "controller-port", 60000, "Set the controller address")
+	rootCommand.PersistentFlags().IntVar(&controllerPort, "controller-port", wire.PortDefault, "Set the controller address")
 	rootCommand.PersistentFlags().StringVar(&boardAddressString, "board-address", "", "Set the board address (either hexadecimal or decimial)")
 	rootCommand.PersistentFlags().StringVar(&controllerFile, "controller-file", "", "Use this CSV file to load the controller information")
 	rootCommand.PersistentFlags().StringVar(&personnelFile, "personnel-file", "", "Use this CSV file to load the personnel information")
@@ -514,6 +514,38 @@ func main() {
 						logrus.Infof("Response: %+v", response)
 					}
 				}
+			},
+		}
+
+		rootCommand.AddCommand(cmd)
+	}
+
+	{
+		cmd := &cobra.Command{
+			Use:   "search",
+			Short: "Search for controllers on the local network",
+			Long:  ``,
+			Args:  cobra.NoArgs,
+			Run: func(cmd *cobra.Command, args []string) {
+				client := &wire.Client{
+					Protocol:          wire.ProtocolUDP,
+					ControllerAddress: "255.255.255.255",
+					BoardAddress:      0xffff,
+					ControllerPort:    wire.PortDefault, // TODO: Consider setting this.
+				}
+				logrus.Debugf("Client: %+v", client)
+
+				request := wire.GetNetworkInfoRequest{
+					Unknown1: 0,
+				}
+				var response wire.GetOperationStatusResponse
+				err := client.Raw(wire.FunctionGetOperationStatus, &request, &response)
+				if err != nil {
+					logrus.Errorf("Error from client: %v", err)
+					return
+				}
+
+				logrus.Debugf("Response: %+v", response)
 			},
 		}
 
