@@ -8,10 +8,20 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+type Protocol string
+
+const (
+	ProtocolTCP = "tcp"
+	ProtocolUDP = "udp"
+)
+
 type Client struct {
+	Protocol          Protocol
 	ControllerAddress string
 	ControllerPort    int
 	BoardAddress      uint16
+
+	BufferSize int
 
 	conn net.Conn
 }
@@ -22,10 +32,16 @@ func (c *Client) init() error {
 		if c.ControllerPort == 0 {
 			c.ControllerPort = 60000
 		}
+		if len(c.Protocol) == 0 {
+			c.Protocol = ProtocolTCP
+		}
+		if c.BufferSize == 0 {
+			c.BufferSize = 1024
+		}
 
 		var err error
-		logrus.Debugf("Dialing: %s:%d", c.ControllerAddress, c.ControllerPort)
-		c.conn, err = net.Dial("tcp", fmt.Sprintf("%s:%d", c.ControllerAddress, c.ControllerPort))
+		logrus.Debugf("Dialing (%s): %s:%d", c.Protocol, c.ControllerAddress, c.ControllerPort)
+		c.conn, err = net.Dial(string(c.Protocol), fmt.Sprintf("%s:%d", c.ControllerAddress, c.ControllerPort))
 		if err != nil {
 			return err
 		}
@@ -76,7 +92,7 @@ func (c *Client) Raw(f uint16, request any, response any) error {
 	{
 		c.conn.SetDeadline(time.Now().Add(5 * time.Second))
 
-		contents := make([]byte, 1024) // TODO: Consider a buffer size setting for the client.
+		contents := make([]byte, c.BufferSize)
 		bytesRead, err := c.conn.Read(contents)
 		if err != nil {
 			c.conn.Close()
