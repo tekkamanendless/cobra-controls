@@ -22,8 +22,8 @@ func main() {
 	verbose := false
 
 	rootCommand := &cobra.Command{
-		Use:   "cobra-cli",
-		Short: "Command-line tools for Cobra Controls access systems",
+		Use:   "view-packets <pcap-file>[ ...]",
+		Short: "View packets",
 		Long:  ``,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			if verbose {
@@ -48,6 +48,7 @@ func main() {
 				logrus.Infof("Personnel: (%d)", len(personnelList))
 			}
 		},
+		Args: cobra.MinimumNArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			filenames := args
 
@@ -57,6 +58,13 @@ func main() {
 					tcp, _ := tcpLayer.(*layers.TCP)
 					logrus.Debugf("From src port %d to dst port %d.", tcp.SrcPort, tcp.DstPort)
 					if tcp.SrcPort != 60000 && tcp.DstPort != 60000 {
+						return false
+					}
+				} else if udpLayer := packet.Layer(layers.LayerTypeUDP); udpLayer != nil {
+					logrus.Debugf("This is a UDP packet.")
+					udp, _ := udpLayer.(*layers.UDP)
+					logrus.Debugf("From src port %d to dst port %d.", udp.SrcPort, udp.DstPort)
+					if udp.SrcPort != 60000 && udp.DstPort != 60000 {
 						return false
 					}
 				} else {
@@ -93,6 +101,17 @@ func main() {
 								controllerAddress = packet.NetworkLayer().NetworkFlow().Src().String()
 							}
 						}
+					} else if udpLayer := packet.Layer(layers.LayerTypeUDP); udpLayer != nil {
+						if udp, ok := udpLayer.(*layers.UDP); ok {
+							if udp.DstPort == 60000 {
+								fromClient = true
+								controllerAddress = packet.NetworkLayer().NetworkFlow().Dst().String()
+							} else {
+								controllerAddress = packet.NetworkLayer().NetworkFlow().Src().String()
+							}
+						}
+					} else {
+						logrus.Warnf("Could not determine source/destination from packet.")
 					}
 
 					data := packet.TransportLayer().LayerPayload()
@@ -705,9 +724,24 @@ func parseData(fullContents *wire.Reader, fromClient bool, controllerAddress str
 			}
 			logrus.Infof("Response: %+v", response)
 		}
-	case 0x11F2:
-		logrus.Infof("Function: Setting TCPIP")
-		logrus.Warnf("TODO NOT IMPLEMENTED")
+	case wire.FunctionSetNetworkInfo:
+		logrus.Infof("Function: SetNetworkInfo")
+		if fromClient {
+			var request wire.SetNetworkInfoRequest
+			err = wire.Decode(data, &request)
+			if err != nil {
+				return err
+			}
+			logrus.Infof("Request: %+v", request)
+		} else {
+			var response wire.SetNetworkInfoResponse
+			err = wire.Decode(data, &response)
+			if err != nil {
+				return err
+			}
+			logrus.Infof("Response: %+v", response)
+		}
+
 	default:
 		logrus.Warnf("TODO UNHANDLED FUNCTION: %X", envelope.Function)
 	}
