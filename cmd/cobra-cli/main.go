@@ -21,6 +21,7 @@ func main() {
 	var boardAddress uint16
 	var controllerFile string
 	var personnelFile string
+	var protocol string
 
 	var clients []*wire.Client
 	var controllerList cobrafile.ControllerList
@@ -69,6 +70,7 @@ func main() {
 					ControllerAddress: controllerAddress,
 					ControllerPort:    controllerPort,
 					BoardAddress:      boardAddress,
+					Protocol:          wire.Protocol(protocol),
 				}
 				logrus.Debugf("Client: %+v", client)
 				clients = append(clients, client)
@@ -84,6 +86,7 @@ func main() {
 							ControllerAddress: controller.Address,
 							ControllerPort:    controller.Port,
 							BoardAddress:      controller.SN,
+							Protocol:          wire.Protocol(protocol),
 						}
 						logrus.Debugf("Client: %+v", client)
 						clients = append(clients, client)
@@ -102,6 +105,7 @@ func main() {
 	rootCommand.PersistentFlags().StringVar(&boardAddressString, "board-address", "", "Set the board address (either hexadecimal or decimial)")
 	rootCommand.PersistentFlags().StringVar(&controllerFile, "controller-file", "", "Use this CSV file to load the controller information")
 	rootCommand.PersistentFlags().StringVar(&personnelFile, "personnel-file", "", "Use this CSV file to load the personnel information")
+	rootCommand.PersistentFlags().StringVar(&protocol, "protocol", wire.ProtocolTCP, "Use this protocol to communicate")
 	rootCommand.PersistentFlags().BoolVar(&verbose, "verbose", false, "Enable verbose output")
 
 	{
