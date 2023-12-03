@@ -135,7 +135,7 @@ func main() {
 							RecordIndex: 0,
 						}
 						var response wire.GetOperationStatusResponse
-						err := client.Raw(wire.FunctionGetOperationStatus, &request, &response)
+						err := client.Do(wire.FunctionGetOperationStatus, &request, &response)
 						if err != nil {
 							logrus.Errorf("Error from client: %v", err)
 							continue
@@ -189,7 +189,7 @@ func main() {
 							Index: index,
 						}
 						var response wire.GetUploadResponse
-						err := client.Raw(wire.FunctionGetUpload, &request, &response)
+						err := client.Do(wire.FunctionGetUpload, &request, &response)
 						if err != nil {
 							logrus.Errorf("Error from client: %v", err)
 							continue
@@ -258,7 +258,7 @@ func main() {
 								RecordIndex: 0,
 							}
 							var response wire.GetOperationStatusResponse
-							err := client.Raw(wire.FunctionGetOperationStatus, &request, &response)
+							err := client.Do(wire.FunctionGetOperationStatus, &request, &response)
 							if err != nil {
 								logrus.Errorf("Error from client: %v", err)
 								continue
@@ -296,7 +296,7 @@ func main() {
 							RecordIndex: nextNumber,
 						}
 						var response wire.GetOperationStatusResponse
-						err := client.Raw(wire.FunctionGetOperationStatus, &request, &response)
+						err := client.Do(wire.FunctionGetOperationStatus, &request, &response)
 						if err != nil {
 							logrus.Errorf("Error from client: %v", err)
 							continue
@@ -347,7 +347,7 @@ func main() {
 				for _, client := range clients {
 					{
 						var response wire.GetBasicInfoResponse
-						err := client.Raw(wire.FunctionGetBasicInfo, nil, &response)
+						err := client.Do(wire.FunctionGetBasicInfo, nil, &response)
 						if err != nil {
 							logrus.Errorf("Error: %v", err)
 							continue
@@ -359,7 +359,7 @@ func main() {
 							Unknown1: 1,
 						}
 						var response wire.GetNetworkInfoResponse
-						err := client.Raw(wire.FunctionGetNetworkInfo, request, &response)
+						err := client.Do(wire.FunctionGetNetworkInfo, request, &response)
 						if err != nil {
 							logrus.Errorf("Error: %v", err)
 							continue
@@ -408,7 +408,7 @@ func main() {
 							RecordIndex: nextNumber,
 						}
 						var response wire.GetOperationStatusResponse
-						err := client.Raw(wire.FunctionGetOperationStatus, &request, &response)
+						err := client.Do(wire.FunctionGetOperationStatus, &request, &response)
 						if err != nil {
 							logrus.Errorf("Error from client: %v", err)
 							continue
@@ -422,7 +422,7 @@ func main() {
 										RecordIndex: index,
 									}
 									var response wire.GetOperationStatusResponse
-									err := client.Raw(wire.FunctionGetOperationStatus, &request, &response)
+									err := client.Do(wire.FunctionGetOperationStatus, &request, &response)
 									if err != nil {
 										logrus.Errorf("Error from client: %v", err)
 										continue
@@ -506,7 +506,7 @@ func main() {
 							Unkonwn1: 1,
 						}
 						var response wire.OpenDoorResponse
-						err := client.Raw(wire.FunctionGetBasicInfo, &request, &response)
+						err := client.Do(wire.FunctionGetBasicInfo, &request, &response)
 						if err != nil {
 							logrus.Errorf("Error: %v", err)
 							continue
@@ -529,9 +529,15 @@ func main() {
 			Run: func(cmd *cobra.Command, args []string) {
 				client := &wire.Client{
 					Protocol:          wire.ProtocolUDP,
-					ControllerAddress: "255.255.255.255",
-					BoardAddress:      0xffff,
+					ControllerAddress: controllerAddress,
+					BoardAddress:      boardAddress,
 					ControllerPort:    wire.PortDefault, // TODO: Consider setting this.
+				}
+				if client.ControllerAddress == "" {
+					client.ControllerAddress = "255.255.255.255"
+				}
+				if client.BoardAddress == 0 {
+					client.BoardAddress = 0xffff
 				}
 				logrus.Debugf("Client: %+v", client)
 
@@ -539,7 +545,7 @@ func main() {
 					Unknown1: 0,
 				}
 				var responses []wire.GetNetworkInfoResponse
-				err := client.Raw(wire.FunctionGetNetworkInfo, &request, &responses)
+				err := client.Do(wire.FunctionGetNetworkInfo, &request, &responses)
 				if err != nil {
 					logrus.Errorf("Error from client: %v", err)
 					return
@@ -584,7 +590,7 @@ func main() {
 						CurrentTime: currentTime,
 					}
 					var response wire.SetTimeResponse
-					err := client.Raw(wire.FunctionSetTime, &request, &response)
+					err := client.Do(wire.FunctionSetTime, &request, &response)
 					if err != nil {
 						logrus.Errorf("Error: %v", err)
 						continue
