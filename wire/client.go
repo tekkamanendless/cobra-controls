@@ -137,6 +137,7 @@ func (c *Client) Raw(f uint16, request any, response any) error {
 				if err != nil {
 					return err
 				}
+				logrus.Debugf("Interface %s has %d addresses: %s", iface.Name, len(addrs), addrs)
 				if len(addrs) == 0 {
 					continue
 				}
@@ -145,6 +146,10 @@ func (c *Client) Raw(f uint16, request any, response any) error {
 				ipAddress, _, err := net.ParseCIDR(addr.String())
 				if err != nil {
 					return err
+				}
+				if ipAddress.To4() == nil {
+					logrus.Debugf("Skipping non-v4 iP address: %s", ipAddress)
+					continue
 				}
 				logrus.Debugf("Creating UDP connection on: %s", ipAddress)
 
