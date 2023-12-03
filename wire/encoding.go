@@ -41,7 +41,7 @@ func Decode(reader *Reader, v any) error {
 
 func encodeViaReflection(writer *Writer, input any, options encodingOptions) error {
 	if e, ok := input.(Encoder); ok {
-		logrus.Debugf("encodeViaReflection: Encoding via Encoder: %t", input)
+		logrus.Debugf("encodeViaReflection: Encoding via Encoder: %T", input)
 		return e.Encode(writer)
 	}
 

@@ -237,41 +237,51 @@ func (c *Client) RawMulticast(requestEnvelope Envelope) ([]*Envelope, error) {
 	return responseEnvelopes, nil
 }
 
-func (c *Client) Do(f uint16, request any, response any) error {
+// Do performs a request and decodes the response.
+func (c *Client) Do(functionCode uint16, request any, response any) error {
+	_, err := c.DoWithEnvelopes(functionCode, request, response)
+	return err
+}
+
+// DoWithEnvelopes performs a request and decodes the response.
+// This will return the envelopes (with their full contents) as well.
+func (c *Client) DoWithEnvelopes(functionCode uint16, request any, response any) ([]*Envelope, error) {
 	if err := c.init(); err != nil {
-		return err
+		return nil, err
 	}
 
 	payloadWriter := NewWriter()
 	if request != nil {
 		err := Encode(payloadWriter, request)
 		if err != nil {
-			return fmt.Errorf("could not encode contents: %w", err)
+			return nil, fmt.Errorf("could not encode contents: %w", err)
 		}
 	}
 
 	requestEnvelope := Envelope{
 		BoardAddress: c.BoardAddress,
-		Function:     f,
+		Function:     functionCode,
 		Contents:     payloadWriter.Bytes(),
 	}
 
 	if c.Protocol == ProtocolTCP {
 		responseEnvelope, err := c.RawUnicast(requestEnvelope)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		if response != nil {
 			err = Decode(NewReader(responseEnvelope.Contents), response)
 			if err != nil {
-				return fmt.Errorf("could not decode response: %v", err)
+				return nil, fmt.Errorf("could not decode response: %w", err)
 			}
 		}
+
+		return []*Envelope{responseEnvelope}, nil
 	} else if c.Protocol == ProtocolUDP {
 		responseEnvelopes, err := c.RawMulticast(requestEnvelope)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		myValue := reflect.ValueOf(response)
@@ -298,14 +308,14 @@ func (c *Client) Do(f uint16, request any, response any) error {
 
 		if !readMany {
 			if len(responseEnvelopes) == 0 {
-				return os.ErrDeadlineExceeded
+				return nil, os.ErrDeadlineExceeded
 			}
 			responseEnvelope := responseEnvelopes[0]
 
 			if response != nil {
 				err = Decode(NewReader(responseEnvelope.Contents), response)
 				if err != nil {
-					return fmt.Errorf("could not decode response: %v", err)
+					return nil, fmt.Errorf("could not decode response: %v", err)
 				}
 			}
 		} else {
@@ -321,12 +331,14 @@ func (c *Client) Do(f uint16, request any, response any) error {
 					}
 					err = Decode(NewReader(responseEnvelope.Contents), myValue.Index(i).Addr().Interface())
 					if err != nil {
-						return fmt.Errorf("could not decode response %d: %v", i, err)
+						return nil, fmt.Errorf("could not decode response %d: %v", i, err)
 					}
 				}
 			}
 		}
+
+		return responseEnvelopes, nil
 	}
 
-	return nil
+	return nil, fmt.Errorf("invalid protocol: %s", c.Protocol)
 }
