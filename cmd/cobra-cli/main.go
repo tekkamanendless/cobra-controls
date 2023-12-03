@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"os"
 	"path"
 	"strconv"
@@ -16,7 +17,7 @@ import (
 func main() {
 	var controllerName string
 	var controllerAddress string
-	var controllerPort int
+	var controllerPort uint16
 	var boardAddressString string
 	var boardAddress uint16
 	var controllerFile string
@@ -68,7 +69,7 @@ func main() {
 			if controllerAddress != "" && controllerPort > 0 && boardAddress > 0 {
 				client := &wire.Client{
 					ControllerAddress: controllerAddress,
-					ControllerPort:    controllerPort,
+					ControllerPort:    uint16(controllerPort),
 					BoardAddress:      boardAddress,
 					Protocol:          wire.Protocol(protocol),
 				}
@@ -101,11 +102,11 @@ func main() {
 	}
 	rootCommand.PersistentFlags().StringVar(&controllerName, "controller-name", "", "A wildcard expression to match controllers")
 	rootCommand.PersistentFlags().StringVar(&controllerAddress, "controller-address", "", "Set the controller address")
-	rootCommand.PersistentFlags().IntVar(&controllerPort, "controller-port", wire.PortDefault, "Set the controller address")
+	rootCommand.PersistentFlags().Uint16Var(&controllerPort, "controller-port", wire.PortDefault, "Set the controller address")
 	rootCommand.PersistentFlags().StringVar(&boardAddressString, "board-address", "", "Set the board address (either hexadecimal or decimial)")
 	rootCommand.PersistentFlags().StringVar(&controllerFile, "controller-file", "", "Use this CSV file to load the controller information")
 	rootCommand.PersistentFlags().StringVar(&personnelFile, "personnel-file", "", "Use this CSV file to load the personnel information")
-	rootCommand.PersistentFlags().StringVar(&protocol, "protocol", wire.ProtocolTCP, "Use this protocol to communicate")
+	rootCommand.PersistentFlags().StringVar(&protocol, "protocol", "", "Use this protocol to communicate (if unspecified, the appropriate default for the command will be used)")
 	rootCommand.PersistentFlags().BoolVar(&verbose, "verbose", false, "Enable verbose output")
 
 	{
@@ -531,11 +532,18 @@ func main() {
 			Long:  ``,
 			Args:  cobra.NoArgs,
 			Run: func(cmd *cobra.Command, args []string) {
-				client := &wire.Client{
-					Protocol:          wire.ProtocolUDP,
-					ControllerAddress: controllerAddress,
-					BoardAddress:      boardAddress,
-					ControllerPort:    wire.PortDefault, // TODO: Consider setting this.
+				if len(clients) == 0 {
+					client := &wire.Client{
+						ControllerAddress: controllerAddress,
+						BoardAddress:      boardAddress,
+						ControllerPort:    controllerPort,
+					}
+					clients = append(clients, client)
+				}
+				client := clients[0]
+
+				if len(client.Protocol) == 0 {
+					client.Protocol = wire.ProtocolUDP
 				}
 				if client.ControllerAddress == "" {
 					client.ControllerAddress = "255.255.255.255"
@@ -549,17 +557,81 @@ func main() {
 					Unknown1: 0,
 				}
 				var responses []wire.GetNetworkInfoResponse
-				err := client.Do(wire.FunctionGetNetworkInfo, &request, &responses)
+				responseEnvelopes, err := client.DoWithEnvelopes(wire.FunctionGetNetworkInfo, &request, &responses)
 				if err != nil {
 					logrus.Errorf("Error from client: %v", err)
 					return
 				}
 
 				logrus.Debugf("Responses: %+v", responses)
-				for _, response := range responses {
+				for i, response := range responses {
+					responseEnvelope := responseEnvelopes[i]
+					logrus.Debugf("Response envelope: %+v", responseEnvelope)
 					logrus.Debugf("Response: %+v", response)
-					fmt.Printf("MAC address: %s (%s / %s via %s on port %d)\n", response.MACAddress, response.IPAddress, response.Netmask, response.Gateway, response.Port)
+					fmt.Printf("Board address: %d :: MAC address: %s (%s / %s via %s on port %d)\n", responseEnvelope.BoardAddress, response.MACAddress, response.IPAddress, response.Netmask, response.Gateway, response.Port)
 				}
+			},
+		}
+
+		rootCommand.AddCommand(cmd)
+	}
+
+	{
+		cmd := &cobra.Command{
+			Use:   "set-network <ip> <netmask> <gateway> [<port>]",
+			Short: "Set the network information",
+			Long:  ``,
+			Args:  cobra.RangeArgs(3, 4),
+			Run: func(cmd *cobra.Command, args []string) {
+				newIPAddress := net.ParseIP(args[0])
+				newNetmask := net.ParseIP(args[1])
+				newGateway := net.ParseIP(args[2])
+				newPort := wire.PortDefault
+				if len(args) > 3 {
+					v, err := strconv.ParseUint(args[3], 10, 16)
+					if err != nil {
+						logrus.Errorf("Could not parse port number: [%T] %v", err, err)
+						return
+					}
+					newPort = uint16(v)
+				}
+
+				if len(clients) == 0 {
+					client := &wire.Client{
+						ControllerAddress: controllerAddress,
+						BoardAddress:      boardAddress,
+						ControllerPort:    controllerPort,
+					}
+					clients = append(clients, client)
+				}
+				client := clients[0]
+
+				if len(client.Protocol) == 0 {
+					client.Protocol = wire.ProtocolUDP
+				}
+				if client.ControllerAddress == "" {
+					client.ControllerAddress = "255.255.255.255"
+				}
+				if client.BoardAddress == 0 {
+					client.BoardAddress = 0xffff
+				}
+				logrus.Debugf("Client: %+v", client)
+
+				request := wire.SetNetworkInfoRequest{
+					IPAddress: newIPAddress,
+					Netmask:   newNetmask,
+					Gateway:   newGateway,
+					Port:      newPort,
+				}
+				var response wire.SetNetworkInfoResponse
+				err := client.Do(wire.FunctionSetNetworkInfo, &request, &response)
+				if err != nil {
+					logrus.Errorf("Error: %v", err)
+					return
+				}
+				logrus.Debugf("Response: %+v", response)
+
+				// TODO: Print something about the response.
 			},
 		}
 

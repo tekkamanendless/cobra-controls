@@ -18,12 +18,12 @@ const (
 	ProtocolUDP = "udp"
 )
 
-const PortDefault = 60000
+const PortDefault uint16 = 60000
 
 type Client struct {
 	Protocol          Protocol
 	ControllerAddress string
-	ControllerPort    int
+	ControllerPort    uint16
 	BoardAddress      uint16
 
 	BufferSize int

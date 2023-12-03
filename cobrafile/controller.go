@@ -14,7 +14,7 @@ type ControllerList []Controller
 type Controller struct {
 	Name    string
 	Address string
-	Port    int
+	Port    uint16
 	SN      uint16
 	Doors   []string
 }
@@ -60,7 +60,7 @@ func LoadController(filename string) (ControllerList, error) {
 				if err != nil {
 					return nil, fmt.Errorf("row %d: could not parse port: %w", r, err)
 				}
-				p.Port = int(v)
+				p.Port = uint16(v)
 			case "sn":
 				v, err := strconv.ParseInt(value, 10, 17) // 16-bit address, plus one for sign.
 				if err != nil {
