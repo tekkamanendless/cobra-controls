@@ -538,8 +538,8 @@ func main() {
 				request := wire.GetNetworkInfoRequest{
 					Unknown1: 0,
 				}
-				var response wire.GetOperationStatusResponse
-				err := client.Raw(wire.FunctionGetOperationStatus, &request, &response)
+				var response wire.GetNetworkInfoResponse
+				err := client.Raw(wire.FunctionGetNetworkInfo, &request, &response)
 				if err != nil {
 					logrus.Errorf("Error from client: %v", err)
 					return
