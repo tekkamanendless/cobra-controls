@@ -5,6 +5,7 @@ import (
 	"net"
 	"os"
 	"reflect"
+	"sync"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -27,8 +28,7 @@ type Client struct {
 
 	BufferSize int
 
-	conn       net.Conn
-	packetConn net.PacketConn
+	conn net.Conn
 }
 
 func (c *Client) init() error {
@@ -52,17 +52,6 @@ func (c *Client) init() error {
 			return err
 		}
 		logrus.Debugf("Connected via TCP.")
-	}
-	if c.Protocol == ProtocolUDP && c.packetConn == nil {
-		logrus.Debugf("Creating UDP connection.")
-
-		var err error
-		logrus.Debugf("Listening (%s).", c.Protocol)
-		c.packetConn, err = net.ListenPacket("udp", ":0")
-		if err != nil {
-			return err
-		}
-		logrus.Debugf("Connected via UDP.")
 	}
 	return nil
 }
@@ -137,9 +126,41 @@ func (c *Client) Raw(f uint16, request any, response any) error {
 			}
 		}
 	} else if c.Protocol == ProtocolUDP {
+		var packetConns []net.PacketConn
 		{
-			c.packetConn.SetDeadline(time.Now().Add(5 * time.Second))
+			ifaces, err := net.Interfaces()
+			if err != nil {
+				return err
+			}
+			for _, iface := range ifaces {
+				addrs, err := iface.Addrs()
+				if err != nil {
+					return err
+				}
+				if len(addrs) == 0 {
+					continue
+				}
+				addr := addrs[0]
 
+				ipAddress, _, err := net.ParseCIDR(addr.String())
+				if err != nil {
+					return err
+				}
+				logrus.Debugf("Creating UDP connection on: %s", ipAddress)
+
+				logrus.Debugf("Listening (%s) on %s.", c.Protocol, ipAddress)
+				packetConn, err := net.ListenPacket("udp", fmt.Sprintf("%s:0", ipAddress))
+				if err != nil {
+					return err
+				}
+				defer packetConn.Close()
+				logrus.Debugf("Connected via UDP on %s.", packetConn.LocalAddr())
+
+				packetConns = append(packetConns, packetConn)
+			}
+		}
+
+		for _, packetConn := range packetConns {
 			payloadWriter := NewWriter()
 			if request != nil {
 				err := Encode(payloadWriter, request)
@@ -162,13 +183,11 @@ func (c *Client) Raw(f uint16, request any, response any) error {
 
 			addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", c.ControllerAddress, c.ControllerPort))
 			if err != nil {
-				panic(err)
+				return err
 			}
 
-			bytesWritten, err := c.packetConn.WriteTo(messageWriter.Bytes(), addr)
+			bytesWritten, err := packetConn.WriteTo(messageWriter.Bytes(), addr)
 			if err != nil {
-				c.packetConn.Close()
-				c.packetConn = nil
 				return fmt.Errorf("could not write message: %v", err)
 			}
 			logrus.Debugf("Bytes written: %d", bytesWritten)
@@ -200,25 +219,41 @@ func (c *Client) Raw(f uint16, request any, response any) error {
 		logrus.Debugf("Read many?: %t", readMany)
 
 		var packets [][]byte
-		for {
-			contents := make([]byte, c.BufferSize)
-			bytesRead, sourceAddress, err := c.packetConn.ReadFrom(contents)
-			if err != nil {
-				if os.IsTimeout(err) {
-					break
+		var mutex sync.Mutex
+		var wg sync.WaitGroup
+		for _, packetConn := range packetConns {
+			wg.Add(1)
+			go func(packetConn net.PacketConn) {
+				defer wg.Done()
+
+				logrus.Debugf("Reading packets from %s.", packetConn.LocalAddr())
+				packetConn.SetDeadline(time.Now().Add(5 * time.Second))
+
+				for {
+					contents := make([]byte, c.BufferSize)
+					bytesRead, sourceAddress, err := packetConn.ReadFrom(contents)
+					if err != nil {
+						if os.IsTimeout(err) {
+							break
+						}
+						logrus.Errorf("Could not read contents: %v", err)
+						return
+					}
+					_ = sourceAddress
+					contents = contents[0:bytesRead]
+					logrus.Debugf("Bytes read: (%d) %x", bytesRead, contents)
+
+					mutex.Lock()
+					packets = append(packets, contents)
+					mutex.Unlock()
+
+					if !readMany {
+						break
+					}
 				}
-				return fmt.Errorf("could not read contents: %v", err)
-			}
-			_ = sourceAddress
-			contents = contents[0:bytesRead]
-			logrus.Debugf("Bytes read: (%d) %x", bytesRead, contents)
-
-			packets = append(packets, contents)
-
-			if !readMany {
-				break
-			}
+			}(packetConn)
 		}
+		wg.Wait()
 		logrus.Debugf("Read %d packets.", len(packets))
 
 		if !readMany {
