@@ -538,14 +538,18 @@ func main() {
 				request := wire.GetNetworkInfoRequest{
 					Unknown1: 0,
 				}
-				var response wire.GetNetworkInfoResponse
-				err := client.Raw(wire.FunctionGetNetworkInfo, &request, &response)
+				var responses []wire.GetNetworkInfoResponse
+				err := client.Raw(wire.FunctionGetNetworkInfo, &request, &responses)
 				if err != nil {
 					logrus.Errorf("Error from client: %v", err)
 					return
 				}
 
-				logrus.Debugf("Response: %+v", response)
+				logrus.Debugf("Responses: %+v", responses)
+				for _, response := range responses {
+					logrus.Debugf("Response: %+v", response)
+					fmt.Printf("MAC address: %s (%s / %s via %s on port %d)\n", response.MACAddress, response.IPAddress, response.Netmask, response.Gateway, response.Port)
+				}
 			},
 		}
 

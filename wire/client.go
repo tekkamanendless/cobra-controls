@@ -3,6 +3,8 @@ package wire
 import (
 	"fmt"
 	"net"
+	"os"
+	"reflect"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -175,20 +177,61 @@ func (c *Client) Raw(f uint16, request any, response any) error {
 			}
 		}
 
-		{
+		myValue := reflect.ValueOf(response)
+		if myValue.Type().Kind() == reflect.Pointer {
+			logrus.Debugf("Initial response type: %+v", myValue.Type())
+			if myValue.IsNil() {
+				logrus.Debugf("Initial value is nil.")
+				newValue := reflect.New(myValue.Type().Elem())
+				myValue = newValue
+			}
+			myValue = myValue.Elem()
+		}
+		logrus.Debugf("Response type: %v", myValue.Type())
+
+		readMany := false
+		if myValue.Type().Kind() == reflect.Array {
+			logrus.Debugf("This is an array.")
+			readMany = true
+		} else if myValue.Type().Kind() == reflect.Slice {
+			logrus.Debugf("This is a slice.")
+			readMany = true
+		}
+		logrus.Debugf("Read many?: %t", readMany)
+
+		var packets [][]byte
+		for {
 			contents := make([]byte, c.BufferSize)
 			bytesRead, sourceAddress, err := c.packetConn.ReadFrom(contents)
 			if err != nil {
+				if os.IsTimeout(err) {
+					break
+				}
 				return fmt.Errorf("could not read contents: %v", err)
 			}
 			_ = sourceAddress
 			contents = contents[0:bytesRead]
 			logrus.Debugf("Bytes read: (%d) %x", bytesRead, contents)
 
+			packets = append(packets, contents)
+
+			if !readMany {
+				break
+			}
+		}
+		logrus.Debugf("Read %d packets.", len(packets))
+
+		if !readMany {
+			if len(packets) == 0 {
+				return os.ErrDeadlineExceeded
+			}
+
+			contents := packets[0]
+
 			reader := NewReader(contents)
 
 			var envelope Envelope
-			err = Decode(reader, &envelope)
+			err := Decode(reader, &envelope)
 			if err != nil {
 				return fmt.Errorf("could not decode envelope: %v", err)
 			}
@@ -198,6 +241,32 @@ func (c *Client) Raw(f uint16, request any, response any) error {
 				err = Decode(NewReader(envelope.Contents), response)
 				if err != nil {
 					return fmt.Errorf("could not decode response: %v", err)
+				}
+			}
+		} else {
+			if myValue.Type().Kind() == reflect.Slice {
+				myValue.Set(reflect.MakeSlice(myValue.Type(), len(packets), len(packets)))
+			}
+
+			for i, contents := range packets {
+				reader := NewReader(contents)
+
+				var envelope Envelope
+				err := Decode(reader, &envelope)
+				if err != nil {
+					return fmt.Errorf("could not decode envelope %d: %v", i, err)
+				}
+				logrus.Debugf("Response %d: %x", i, envelope.Contents)
+
+				if response != nil {
+					if i >= myValue.Cap() {
+						logrus.Debugf("Hit the capacity of the array or slice: %d", myValue.Cap())
+						break
+					}
+					err = Decode(NewReader(envelope.Contents), myValue.Index(i).Addr().Interface())
+					if err != nil {
+						return fmt.Errorf("could not decode response %d: %v", i, err)
+					}
 				}
 			}
 		}
