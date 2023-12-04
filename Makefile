@@ -17,3 +17,9 @@ bin/cobra-cli: bin $(ALL_GO_FILES)
 
 bin/cobra-cli.exe: bin $(ALL_GO_FILES)
 	CGO_ENABLED=0 GOOS=windows go build -o $@ ./cmd/cobra-cli/*.go
+
+.PHONY: test
+test:
+	go vet ./...
+	go test ./...
+

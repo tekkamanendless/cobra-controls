@@ -28,6 +28,10 @@ jobs:
         run: |
           make clean all
 
+      - name: Test
+        run: |
+          make test
+
       - uses: actions/upload-artifact@v3
         with:
           name: bin
