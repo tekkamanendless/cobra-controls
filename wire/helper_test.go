@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"gotest.tools/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCardID(t *testing.T) {
@@ -45,7 +45,6 @@ func TestCardID(t *testing.T) {
 			assert.Equal(t, row.output, output)
 		})
 	}
-
 }
 
 func TestInsaneBase16ToBase10(t *testing.T) {
@@ -130,5 +129,4 @@ func TestInsaneBase10ToBase16(t *testing.T) {
 			assert.Equal(t, row.output, output)
 		})
 	}
-
 }

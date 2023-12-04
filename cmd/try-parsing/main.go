@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/sirupsen/logrus"
-	"gitlab.com/doug-manley/cobra-controls/wire"
+	"github.com/tekkamanendless/cobra-controls/wire"
 )
 
 func main() {
