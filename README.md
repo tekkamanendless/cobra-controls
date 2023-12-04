@@ -1,4 +1,8 @@
 # Cobra Controls
+
+![GitHub tag (latest SemVer)](https://img.shields.io/github/v/tag/tekkamanendless/cobra-controls?label=version&logo=version&sort=semver)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/tekkamanendless/cobra-controls)](https://pkg.go.dev/github.com/tekkamanendless/cobra-controls)
+
 This suite of tools deals with the Cobra Controls ACP-T series (typically sold before 2016).
 
 Using this, you should be able to completely ignore the Windows software that the company provides (but no longer updates).
