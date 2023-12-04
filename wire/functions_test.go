@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gotest.tools/assert"
 )
 
 type EncodeDecodeTest struct {
@@ -33,7 +33,7 @@ func runEncodeDecodeTests(t *testing.T, rows []EncodeDecodeTest) {
 						return
 					}
 					require.Nil(t, err)
-					assert.DeepEqual(t, row.output, newValue.Elem().Interface())
+					assert.Equal(t, row.output, newValue.Elem().Interface())
 				})
 				t.Run("Encode", func(t *testing.T) {
 					if row.fail {
@@ -50,7 +50,7 @@ func runEncodeDecodeTests(t *testing.T, rows []EncodeDecodeTest) {
 					for len(writer.Bytes()) < len(input) {
 						writer.WriteUint8(0)
 					}
-					assert.DeepEqual(t, input, writer.Bytes())
+					assert.Equal(t, input, writer.Bytes())
 				})
 			})
 		})

@@ -10,8 +10,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"gitlab.com/doug-manley/cobra-controls/cobrafile"
-	"gitlab.com/doug-manley/cobra-controls/wire"
+	"github.com/tekkamanendless/cobra-controls/cobrafile"
+	"github.com/tekkamanendless/cobra-controls/wire"
 )
 
 func main() {

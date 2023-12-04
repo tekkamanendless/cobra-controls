@@ -3,17 +3,23 @@ all: cobra-cli
 ALL_GO_FILES=$(shell find ./ -iname '*.go' -type f)
 
 .PHONY: cobra-cli
-cobra-cli: build/cobra-cli build/cobra-cli.exe
+cobra-cli: bin/cobra-cli bin/cobra-cli.exe
 
-build:
-	mkdir -p build
+bin:
+	mkdir -p bin
 
 .PHONY: clean
 clean:
-	rm -rf build
+	rm -rf bin
 
-build/cobra-cli: build $(ALL_GO_FILES)
+bin/cobra-cli: bin $(ALL_GO_FILES)
 	CGO_ENABLED=0 GOOS=linux go build -o $@ ./cmd/cobra-cli/*.go
 
-build/cobra-cli.exe: build $(ALL_GO_FILES)
+bin/cobra-cli.exe: bin $(ALL_GO_FILES)
 	CGO_ENABLED=0 GOOS=windows go build -o $@ ./cmd/cobra-cli/*.go
+
+.PHONY: test
+test:
+	go vet ./...
+	go test ./...
+
