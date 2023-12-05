@@ -578,17 +578,22 @@ func main() {
 
 	{
 		cmd := &cobra.Command{
-			Use:   "set-network <ip> <netmask> <gateway> [<port>]",
+			Use:   "set-network <mac> <ip> <netmask> <gateway> [<port>]",
 			Short: "Set the network information",
 			Long:  ``,
-			Args:  cobra.RangeArgs(3, 4),
+			Args:  cobra.RangeArgs(4, 5),
 			Run: func(cmd *cobra.Command, args []string) {
-				newIPAddress := net.ParseIP(args[0])
-				newNetmask := net.ParseIP(args[1])
-				newGateway := net.ParseIP(args[2])
+				newMACAddress, err := net.ParseMAC(args[0])
+				if err != nil {
+					logrus.Errorf("Could not parse MAC address: [%T] %v", err, err)
+					return
+				}
+				newIPAddress := net.ParseIP(args[1])
+				newNetmask := net.ParseIP(args[2])
+				newGateway := net.ParseIP(args[3])
 				newPort := wire.PortDefault
-				if len(args) > 3 {
-					v, err := strconv.ParseUint(args[3], 10, 16)
+				if len(args) > 4 {
+					v, err := strconv.ParseUint(args[4], 10, 16)
 					if err != nil {
 						logrus.Errorf("Could not parse port number: [%T] %v", err, err)
 						return
@@ -618,13 +623,14 @@ func main() {
 				logrus.Debugf("Client: %+v", client)
 
 				request := wire.SetNetworkInfoRequest{
-					IPAddress: newIPAddress,
-					Netmask:   newNetmask,
-					Gateway:   newGateway,
-					Port:      newPort,
+					MACAddress: newMACAddress,
+					IPAddress:  newIPAddress,
+					Netmask:    newNetmask,
+					Gateway:    newGateway,
+					Port:       newPort,
 				}
 				var response wire.SetNetworkInfoResponse
-				err := client.Do(wire.FunctionSetNetworkInfo, &request, &response)
+				err = client.Do(wire.FunctionSetNetworkInfo, &request, &response)
 				if err != nil {
 					logrus.Errorf("Error: %v", err)
 					return

@@ -144,7 +144,7 @@ func (c *Client) RawMulticast(requestEnvelope Envelope) ([]*Envelope, error) {
 				return nil, err
 			}
 			if ipAddress.To4() == nil {
-				logrus.Debugf("Skipping non-v4 iP address: %s", ipAddress)
+				logrus.Debugf("Skipping non-v4 IP address: %s", ipAddress)
 				continue
 			}
 			logrus.Debugf("Creating UDP connection on: %s", ipAddress)
