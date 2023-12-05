@@ -53,6 +53,7 @@ func main() {
 			filenames := args
 
 			filterPacket := func(packet gopacket.Packet) bool {
+				logrus.Debugf("Packet: %+v", packet)
 				if tcpLayer := packet.Layer(layers.LayerTypeTCP); tcpLayer != nil {
 					logrus.Debugf("This is a TCP packet.")
 					tcp, _ := tcpLayer.(*layers.TCP)
