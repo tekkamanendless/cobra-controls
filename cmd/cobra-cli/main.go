@@ -352,24 +352,32 @@ func main() {
 				for _, client := range clients {
 					{
 						var response wire.GetBasicInfoResponse
-						err := client.Do(wire.FunctionGetBasicInfo, nil, &response)
+						responseEnvelopes, err := client.DoWithEnvelopes(wire.FunctionGetBasicInfo, nil, &response)
 						if err != nil {
 							logrus.Errorf("Error: %v", err)
 							continue
 						}
-						logrus.Infof("Response: %+v", response)
+						responseEnvelope := responseEnvelopes[0]
+
+						logrus.Debugf("Response envelope: %+v", responseEnvelope)
+						logrus.Debugf("Response: %+v", response)
+						fmt.Printf("Board address: %d :: Issue date: %v; version: %d (0x%x); model: %d (0x%x)\n", responseEnvelope.BoardAddress, response.IssueDate, response.Version, response.Version, response.Model, response.Model)
 					}
 					{
 						request := &wire.GetNetworkInfoRequest{
 							Unknown1: 1,
 						}
 						var response wire.GetNetworkInfoResponse
-						err := client.Do(wire.FunctionGetNetworkInfo, request, &response)
+						responseEnvelopes, err := client.DoWithEnvelopes(wire.FunctionGetNetworkInfo, request, &response)
 						if err != nil {
 							logrus.Errorf("Error: %v", err)
 							continue
 						}
-						logrus.Infof("Response: %+v", response)
+						responseEnvelope := responseEnvelopes[0]
+
+						logrus.Debugf("Response envelope: %+v", responseEnvelope)
+						logrus.Debugf("Response: %+v", response)
+						fmt.Printf("Board address: %d :: MAC address: %s (%s / %s via %s on port %d)\n", responseEnvelope.BoardAddress, response.MACAddress, response.IPAddress, response.Netmask, response.Gateway, response.Port)
 					}
 				}
 			},
