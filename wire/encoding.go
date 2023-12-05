@@ -2,6 +2,7 @@ package wire
 
 import (
 	"fmt"
+	"net"
 	"reflect"
 	"time"
 
@@ -147,26 +148,54 @@ func encodeViaReflection(writer *Writer, input any, options encodingOptions) err
 			writer.WriteUint32(input.(uint32))
 		}
 	case reflect.Array:
+		var bytesToWrite []byte
 		if myType.Elem().Kind() == reflect.Uint8 {
 			logrus.Debugf("encodeViaReflection: array value: %+v", reflect.ValueOf(input))
 			if myType.Len() == 0 {
 				// Cool; this is always empty.
 			} else {
-				logrus.Debugf("encodeViaReflection: writing array of bytes: %x", reflect.ValueOf(input).Bytes())
-				writer.WriteBytes(reflect.ValueOf(input).Bytes())
+				bytesToWrite = reflect.ValueOf(input).Bytes()
 			}
 		} else {
 			return fmt.Errorf(fieldPrefix+"unimplemented: encoding an array of kind %q", myType.Elem().Kind())
 		}
-	case reflect.Slice:
-		if myType.Elem().Kind() == reflect.Uint8 {
-			logrus.Debugf("encodeViaReflection: slice value: %+v", reflect.ValueOf(input))
 
-			logrus.Debugf("encodeViaReflection: writing slice of bytes: %x", reflect.ValueOf(input).Bytes())
-			writer.WriteBytes(reflect.ValueOf(input).Bytes())
+		if options.Length > 0 {
+			for len(bytesToWrite) < options.Length {
+				bytesToWrite = append(bytesToWrite, 0x00)
+			}
+			if len(bytesToWrite) > options.Length {
+				return fmt.Errorf(fieldPrefix+"invalid length: wrote %d (expected %d)", len(bytesToWrite), options.Length)
+			}
+		}
+
+		logrus.Debugf("encodeViaReflection: writing array of bytes: (%d) %x", len(bytesToWrite), bytesToWrite)
+		writer.WriteBytes(bytesToWrite)
+	case reflect.Slice:
+		var bytesToWrite []byte
+		if ipValue, ok := input.(net.IP); ok {
+			if ipValue.To4() == nil {
+				return fmt.Errorf(fieldPrefix + "could not convert address to IPv4")
+			}
+			bytesToWrite = ipValue.To4()
+		} else if myType.Elem().Kind() == reflect.Uint8 {
+			logrus.Debugf("encodeViaReflection: slice value: %+v", reflect.ValueOf(input))
+			bytesToWrite = reflect.ValueOf(input).Bytes()
 		} else {
 			return fmt.Errorf(fieldPrefix+"unimplemented: encoding a slice of kind %q", myType.Elem().Kind())
 		}
+
+		if options.Length > 0 {
+			for len(bytesToWrite) < options.Length {
+				bytesToWrite = append(bytesToWrite, 0x00)
+			}
+			if len(bytesToWrite) > options.Length {
+				return fmt.Errorf(fieldPrefix+"invalid length: wrote %d (expected %d)", len(bytesToWrite), options.Length)
+			}
+		}
+
+		logrus.Debugf("encodeViaReflection: writing slice of bytes (%d): %x", len(bytesToWrite), bytesToWrite)
+		writer.WriteBytes(bytesToWrite)
 	default:
 		return fmt.Errorf(fieldPrefix+"unimplemented: kind: %v", myType.Kind())
 	}
